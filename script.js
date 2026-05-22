@@ -173,8 +173,9 @@ function renderPuzzle(type, shiny) {
   const pal = shiny ? SHINY_COLORS : COLORS;
   document.getElementById('cube-svg').innerHTML =
     CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny) : flatPuzzle(type, pal, shiny);
-  document.getElementById('puzzle-name').textContent =
-    (shiny ? '✨ Shiny ' : '') + prettyName(type);
+  const nameEl = document.getElementById('puzzle-name');
+  nameEl.textContent = (shiny ? '✨ Shiny ' : '') + prettyName(type);
+  nameEl.classList.toggle('shiny', !!shiny);
   document.getElementById('cube').classList.toggle('shiny', !!shiny);
 }
 
