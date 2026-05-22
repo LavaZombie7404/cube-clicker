@@ -99,6 +99,12 @@ main {
 .card:active { transform: scale(.98); }
 .card.locked { opacity: .5; cursor: not-allowed; }
 .card.locked:hover { border-color: var(--line); }
+.card.special {
+  border-color: #ffd24a;
+  background: linear-gradient(135deg, #2c2510, var(--panel) 70%);
+}
+.card.special:hover { border-color: #ffe680; }
+.card.special .name { color: #ffd24a; }
 .card-info .name { font-weight: 700; }
 .card-info .desc { color: var(--muted); font-size: .8rem; margin: 2px 0; }
 .card-info .owned { color: var(--accent2); font-size: .76rem; font-weight: 600; }

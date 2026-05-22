@@ -6,7 +6,8 @@ const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
 const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1', 'skewb', 'clock'];
 
 const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
-const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
+const SHINY_CHANCE = 0.0025;                              // base: 1 in 400 clicks
+const SHINY_UP_COST = 5e12;                               // Shiny Magnet: flat 5 trillion per level
 const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
   '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
@@ -45,7 +46,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -62,6 +63,7 @@ const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.building
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
 const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps);
+const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 
 /* =================== HELPERS =================== */
 function fmt(n) {
@@ -255,6 +257,19 @@ function renderPuzzle(type, shiny) {
 
 /* =================== SHOP UI =================== */
 function buildShop() {
+  const su = document.getElementById('shiny-up');
+  su.innerHTML = `
+    <div class="card-info">
+      <div class="name">✨ Shiny Magnet</div>
+      <div class="desc">+1% shiny chance on every click.</div>
+      <div class="owned" id="shiny-lvl">Level 0</div>
+    </div>
+    <div class="card-cost">
+      <div class="cost" id="su-cost">0</div>
+      <div class="sub">cubes</div>
+    </div>`;
+  su.addEventListener('click', buyShinyUp);
+
   const cu = document.getElementById('click-upgrade');
   cu.innerHTML = `
     <div class="card-info">
@@ -338,6 +353,12 @@ function updateUI() {
   document.getElementById('per-click').textContent  = fmt(perClick());
   document.getElementById('shiny-count').textContent = state.shinies;
 
+  document.getElementById('su-cost').textContent = fmt(SHINY_UP_COST);
+  document.getElementById('shiny-lvl').textContent =
+    'Level ' + state.shinyLevel + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
+  toggleCard(document.getElementById('shiny-up'),
+             document.getElementById('su-cost'), state.cubes >= SHINY_UP_COST);
+
   const cc = clickCost();
   document.getElementById('cu-cost').textContent  = fmt(cc);
   document.getElementById('cu-owned').textContent = 'Level ' + state.clickLevel;
@@ -383,6 +404,9 @@ function bulkBuy(costFn, applyFn) {
 function buyClick() {
   bulkBuy(clickCost, () => state.clickLevel++);
 }
+function buyShinyUp() {
+  bulkBuy(() => SHINY_UP_COST, () => state.shinyLevel++);
+}
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
   bulkBuy(() => buildingCost(b), () => state.buildings[id]++);
@@ -403,7 +427,7 @@ function setBuyMode(amt) {
 
 function handleClick(e) {
   const type  = PUZZLES[(Math.random() * PUZZLES.length) | 0];
-  const shiny = Math.random() < SHINY_CHANCE;
+  const shiny = Math.random() < shinyChance();
   let gain = perClick();
 
   if (shiny) {
@@ -472,6 +496,7 @@ function load() {
     state.clickLevel = d.clickLevel || 0;
     state.shinies    = d.shinies || 0;
     state.shinyBonus = d.shinyBonus || 0;
+    state.shinyLevel = d.shinyLevel || 0;
     state.lastSeen   = d.lastSeen || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
