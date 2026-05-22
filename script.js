@@ -5,6 +5,14 @@ const COLORS  = ['#f5f5f5', '#ffd500', '#d92b2b', '#ff7a1a', '#2b6fd9', '#28a745
 const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
 const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1'];
 
+const SHINY_COLORS = ['#fff7c2', '#ffe680', '#ffd000', '#ffb300', '#fff0a8', '#f4c430'];
+const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
+const SHINY = {
+  '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
+  '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
+  pyraminx: 800000, megaminx: 6000000, sq1: 1800000,
+};
+
 const BUILDINGS = [
   { id:'novice',  name:'Novice Cuber', desc:'Solves slowly, but tries hard.',         baseCost:15,        cps:0.3 },
   { id:'speed',   name:'Speedcuber',   desc:'Sub-10 averages, all day long.',         baseCost:120,       cps:1.7 },
@@ -25,7 +33,7 @@ const BOOSTS = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, buildings:{}, boosts:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 
@@ -47,7 +55,7 @@ function fmt(n) {
   while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
   return n.toFixed(2).replace(/\.?0+$/, '') + units[i];
 }
-const rndColor = () => COLORS[(Math.random() * COLORS.length) | 0];
+const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
 const add      = (p, q) => [p[0] + q[0], p[1] + q[1]];
 const scale    = (v, k) => [v[0] * k, v[1] * k];
@@ -72,7 +80,7 @@ function sticker(pts, color, f) {
 
 /* =================== PUZZLE DRAWING =================== */
 // N×N cube, drawn in isometric with 3 visible faces and scrambled colors.
-function isoCube(N) {
+function isoCube(N, pal) {
   const u  = 224 / (2 * N);            // cell width
   const vd = u * 1.16;                 // vertical cell edge
   const C  = [150, 35 + N * u];        // shared front-top corner
@@ -86,13 +94,13 @@ function isoCube(N) {
   let out = '';
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++)
     out += sticker([topPt(i,j), topPt(i+1,j), topPt(i+1,j+1), topPt(i,j+1)],
-                   shade(rndColor(), FACE.top), 0.13);
+                   shade(pick(pal), FACE.top), 0.13);
   for (let a = 0; a < N; a++) for (let c = 0; c < N; c++)
     out += sticker([rightPt(a,c), rightPt(a+1,c), rightPt(a+1,c+1), rightPt(a,c+1)],
-                   shade(rndColor(), FACE.right), 0.13);
+                   shade(pick(pal), FACE.right), 0.13);
   for (let b = 0; b < N; b++) for (let c = 0; c < N; c++)
     out += sticker([leftPt(b,c), leftPt(b+1,c), leftPt(b+1,c+1), leftPt(b,c+1)],
-                   shade(rndColor(), FACE.left), 0.13);
+                   shade(pick(pal), FACE.left), 0.13);
   return out;
 }
 
@@ -146,13 +154,13 @@ function square1Shape() {
   return { outline, stickers: st };
 }
 
-function flatPuzzle(type) {
+function flatPuzzle(type, pal) {
   const shape = type === 'pyraminx' ? pyraminxShape()
               : type === 'megaminx' ? megaminxShape()
               : square1Shape();
   const back = shape.outline.map(p => [p[0], p[1] + 11]);   // extruded depth
   let out = `<polygon points="${polyStr(back)}" fill="#0b0b11"/>`;
-  for (const s of shape.stickers) out += sticker(s, rndColor(), 0.11);
+  for (const s of shape.stickers) out += sticker(s, pick(pal), 0.11);
   return out;
 }
 
@@ -160,10 +168,13 @@ function prettyName(t) {
   if (CUBES.includes(t)) return t.replace('x', '×');
   return { pyraminx: 'Pyraminx', megaminx: 'Megaminx', sq1: 'Square-1' }[t];
 }
-function renderPuzzle(type) {
+function renderPuzzle(type, shiny) {
+  const pal = shiny ? SHINY_COLORS : COLORS;
   document.getElementById('cube-svg').innerHTML =
-    CUBES.includes(type) ? isoCube(parseInt(type, 10)) : flatPuzzle(type);
-  document.getElementById('puzzle-name').textContent = prettyName(type);
+    CUBES.includes(type) ? isoCube(parseInt(type, 10), pal) : flatPuzzle(type, pal);
+  document.getElementById('puzzle-name').textContent =
+    (shiny ? '✨ Shiny ' : '') + prettyName(type);
+  document.getElementById('cube').classList.toggle('shiny', !!shiny);
 }
 
 /* =================== SHOP UI =================== */
@@ -230,6 +241,7 @@ function updateUI() {
   document.getElementById('cube-count').textContent = fmt(state.cubes);
   document.getElementById('per-second').textContent = fmt(cps());
   document.getElementById('per-click').textContent  = fmt(perClick());
+  document.getElementById('shiny-count').textContent = state.shinies;
 
   const cc = clickCost();
   document.getElementById('cu-cost').textContent  = fmt(cc);
@@ -283,12 +295,24 @@ function buyBoost(id) {
 }
 
 function handleClick(e) {
-  const gain = perClick();
+  const type  = PUZZLES[(Math.random() * PUZZLES.length) | 0];
+  const shiny = Math.random() < SHINY_CHANCE;
+  let gain = perClick();
+  if (shiny) gain += SHINY[type];
+
   state.cubes += gain;
   state.total += gain;
-  renderPuzzle(PUZZLES[(Math.random() * PUZZLES.length) | 0]);
+  if (shiny) state.shinies++;
+
+  renderPuzzle(type, shiny);
   popAnim();
-  spawnFloat(e.clientX, e.clientY, '+' + fmt(gain));
+
+  if (shiny) {
+    spawnFloat(e.clientX, e.clientY, '✨ +' + fmt(SHINY[type]) + ' ✨', 'shiny');
+    toast(`✨ SHINY ${prettyName(type)}!  +${fmt(SHINY[type])} cubes! ✨`, 'shiny');
+  } else {
+    spawnFloat(e.clientX, e.clientY, '+' + fmt(gain));
+  }
   updateUI();
 }
 function popAnim() {
@@ -297,18 +321,18 @@ function popAnim() {
   void c.offsetWidth;          // restart the animation
   c.classList.add('pop');
 }
-function spawnFloat(x, y, text) {
+function spawnFloat(x, y, text, cls) {
   const el = document.createElement('div');
-  el.className = 'float';
+  el.className = 'float' + (cls ? ' ' + cls : '');
   el.textContent = text;
   el.style.left = x + 'px';
   el.style.top  = y + 'px';
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 900);
 }
-function toast(msg) {
+function toast(msg, cls) {
   const t = document.createElement('div');
-  t.className = 'toast';
+  t.className = 'toast' + (cls ? ' ' + cls : '');
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 5000);
@@ -334,6 +358,7 @@ function load() {
     state.cubes      = d.cubes || 0;
     state.total      = d.total || 0;
     state.clickLevel = d.clickLevel || 0;
+    state.shinies    = d.shinies || 0;
     state.lastSeen   = d.lastSeen || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
