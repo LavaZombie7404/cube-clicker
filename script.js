@@ -5,7 +5,7 @@ const COLORS  = ['#f5f5f5', '#ffd500', '#d92b2b', '#ff7a1a', '#2b6fd9', '#28a745
 const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
 const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1'];
 
-const SHINY_COLORS = ['#fff7c2', '#ffe680', '#ffd000', '#ffb300', '#fff0a8', '#f4c430'];
+const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
 const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
 const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
@@ -80,12 +80,13 @@ function sticker(pts, color, f) {
 
 /* =================== PUZZLE DRAWING =================== */
 // N×N cube, drawn in isometric with 3 visible faces and scrambled colors.
-function isoCube(N, pal) {
+function isoCube(N, pal, shiny) {
   const u  = 224 / (2 * N);            // cell width
   const vd = u * 1.16;                 // vertical cell edge
   const C  = [150, 35 + N * u];        // shared front-top corner
   const RIGHT = [u, u * 0.5], LEFT = [-u, u * 0.5], DOWN = [0, vd];
-  const FACE = { top: 1, right: 0.78, left: 0.58 };
+  const FACE = shiny ? { top: 1, right: 0.88, left: 0.74 }   // softer so gold stays gold
+                     : { top: 1, right: 0.78, left: 0.58 };
 
   const topPt   = (a, b) => add(add(C, scale(RIGHT, -a)), scale(LEFT, -b));
   const rightPt = (a, c) => add(add(C, scale(LEFT,  -a)), scale(DOWN,  c));
@@ -154,12 +155,12 @@ function square1Shape() {
   return { outline, stickers: st };
 }
 
-function flatPuzzle(type, pal) {
+function flatPuzzle(type, pal, shiny) {
   const shape = type === 'pyraminx' ? pyraminxShape()
               : type === 'megaminx' ? megaminxShape()
               : square1Shape();
   const back = shape.outline.map(p => [p[0], p[1] + 11]);   // extruded depth
-  let out = `<polygon points="${polyStr(back)}" fill="#0b0b11"/>`;
+  let out = `<polygon points="${polyStr(back)}" fill="${shiny ? '#5a3f00' : '#0b0b11'}"/>`;
   for (const s of shape.stickers) out += sticker(s, pick(pal), 0.11);
   return out;
 }
@@ -171,7 +172,7 @@ function prettyName(t) {
 function renderPuzzle(type, shiny) {
   const pal = shiny ? SHINY_COLORS : COLORS;
   document.getElementById('cube-svg').innerHTML =
-    CUBES.includes(type) ? isoCube(parseInt(type, 10), pal) : flatPuzzle(type, pal);
+    CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny) : flatPuzzle(type, pal, shiny);
   document.getElementById('puzzle-name').textContent =
     (shiny ? '✨ Shiny ' : '') + prettyName(type);
   document.getElementById('cube').classList.toggle('shiny', !!shiny);
