@@ -55,6 +55,7 @@ GEAR.forEach(g => state.gear[g.id] = 0);
 let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50, or 'max'
 let autoAcc = 0;                                          // fractional auto-click accumulator
 let resetting = false;                                    // blocks autosave once a reset is in progress
+let lastFloatAt = 0;                                      // throttles the floating +N popups
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -246,7 +247,31 @@ function prettyName(t) {
   return { pyraminx: 'Pyraminx', megaminx: 'Megaminx', sq1: 'Square-1',
            skewb: 'Skewb', clock: 'Clock' }[t];
 }
+// Throttled puzzle rendering: clicks are counted at full speed, but the SVG is
+// only redrawn ~12x/sec so fast tapping doesn't strobe or glitch on mobile.
+let pendingPuzzle = null, renderScheduled = false;
 function renderPuzzle(type, shiny) {
+  if (shiny) {                            // shinies always draw right away — they're special
+    pendingPuzzle = null;
+    drawPuzzle(type, shiny);
+    return;
+  }
+  pendingPuzzle = { type, shiny };
+  if (renderScheduled) return;            // a render window is open; trailing flush will catch it
+  flushPuzzle();                          // leading edge: draw immediately
+  renderScheduled = true;
+  setTimeout(() => {
+    renderScheduled = false;
+    if (pendingPuzzle) flushPuzzle();     // draw the latest puzzle from clicks during the window
+  }, 80);
+}
+function flushPuzzle() {
+  if (!pendingPuzzle) return;
+  const { type, shiny } = pendingPuzzle;
+  pendingPuzzle = null;
+  drawPuzzle(type, shiny);
+}
+function drawPuzzle(type, shiny) {
   const pal = shiny ? SHINY_COLORS : COLORS;
   document.getElementById('cube-svg').innerHTML =
       CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny)
@@ -498,6 +523,9 @@ function popAnim() {
   c.classList.add('pop');
 }
 function spawnFloat(x, y, text, cls) {
+  const now = performance.now();
+  if (!cls && now - lastFloatAt < 80) return;   // throttle ordinary floats; shiny floats always show
+  lastFloatAt = now;
   const el = document.createElement('div');
   el.className = 'float' + (cls ? ' ' + cls : '');
   el.textContent = text;
