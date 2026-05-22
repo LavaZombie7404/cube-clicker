@@ -37,7 +37,7 @@ let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 
-let buyMode = '1';                                        // '1' = buy one, 'max' = buy as many as affordable
+let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50, or 'max'
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -271,40 +271,31 @@ function updateUI() {
 }
 
 /* =================== ACTIONS =================== */
-function buyClick() {
+function bulkBuy(costFn, applyFn) {
+  const limit = buyMode === 'max' ? Infinity : buyMode;
   let bought = 0;
-  while (state.cubes >= clickCost() && (buyMode === 'max' || bought < 1)) {
-    state.cubes -= clickCost();
-    state.clickLevel++;
+  while (bought < limit && state.cubes >= costFn()) {
+    state.cubes -= costFn();
+    applyFn();
     bought++;
   }
   if (bought) { updateUI(); save(); }
+}
+function buyClick() {
+  bulkBuy(clickCost, () => state.clickLevel++);
 }
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
-  let bought = 0;
-  while (state.cubes >= buildingCost(b) && (buyMode === 'max' || bought < 1)) {
-    state.cubes -= buildingCost(b);
-    state.buildings[id]++;
-    bought++;
-  }
-  if (bought) { updateUI(); save(); }
+  bulkBuy(() => buildingCost(b), () => state.buildings[id]++);
 }
 function buyBoost(id) {
   const b = BOOSTS.find(x => x.id === id);
-  let bought = 0;
-  while (state.cubes >= boostCost(b) && (buyMode === 'max' || bought < 1)) {
-    state.cubes -= boostCost(b);
-    state.boosts[id]++;
-    bought++;
-  }
-  if (bought) { updateUI(); save(); }
+  bulkBuy(() => boostCost(b), () => state.boosts[id]++);
 }
-function toggleBuyMode() {
-  buyMode = buyMode === 'max' ? '1' : 'max';
-  const btn = document.getElementById('buy-mode');
-  btn.textContent = 'Buy: ' + (buyMode === 'max' ? 'MAX' : '×1');
-  btn.classList.toggle('max', buyMode === 'max');
+function setBuyMode(amt) {
+  buyMode = amt;
+  document.querySelectorAll('#buy-modes button').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.amt === String(amt)));
 }
 
 function handleClick(e) {
@@ -398,7 +389,9 @@ function init() {
   updateUI();
 
   document.getElementById('cube').addEventListener('click', handleClick);
-  document.getElementById('buy-mode').addEventListener('click', toggleBuyMode);
+  document.querySelectorAll('#buy-modes button').forEach(btn =>
+    btn.addEventListener('click', () =>
+      setBuyMode(btn.dataset.amt === 'max' ? 'max' : parseInt(btn.dataset.amt, 10))));
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset everything and start over?')) {
       localStorage.removeItem(SAVE_KEY);

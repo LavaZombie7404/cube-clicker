@@ -37,7 +37,14 @@
     </section>
 
     <aside class="shop">
-      <button id="buy-mode" class="buy-mode">Buy: ×1</button>
+      <div id="buy-modes" class="buy-modes">
+        <button data-amt="1" class="active">×1</button>
+        <button data-amt="2">×2</button>
+        <button data-amt="5">×5</button>
+        <button data-amt="10">×10</button>
+        <button data-amt="50">×50</button>
+        <button data-amt="max">MAX</button>
+      </div>
       <h2>Upgrades</h2>
       <div id="click-upgrade" class="card"></div>
 

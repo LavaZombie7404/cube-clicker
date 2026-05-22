@@ -76,15 +76,18 @@ main {
   font-size: .8rem; text-transform: uppercase; letter-spacing: 1.5px;
   color: var(--muted); margin: 6px 4px 8px;
 }
-.buy-mode {
-  width: 100%; margin-bottom: 6px; padding: 10px;
-  background: var(--panel); color: var(--text);
-  border: 1px solid var(--line); border-radius: 12px;
-  font-size: .85rem; font-weight: 700; letter-spacing: .5px;
-  cursor: pointer; transition: border-color .15s ease, color .15s ease;
+.buy-modes { display: flex; gap: 4px; margin-bottom: 8px; }
+.buy-modes button {
+  flex: 1; padding: 7px 0;
+  background: var(--panel); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px;
+  font-size: .78rem; font-weight: 700; cursor: pointer;
+  transition: border-color .12s ease, color .12s ease, background .12s ease;
 }
-.buy-mode:hover { border-color: var(--accent); }
-.buy-mode.max { border-color: var(--accent2); color: var(--accent2); }
+.buy-modes button:hover { border-color: var(--accent); }
+.buy-modes button.active {
+  background: var(--accent2); color: #0e0e16; border-color: var(--accent2);
+}
 .card {
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
