@@ -11,6 +11,11 @@ body {
   background: radial-gradient(1200px 600px at 50% -10%, #2a2150 0%, var(--bg) 60%);
   color: var(--text);
   min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;   /* no blue flash on tap */
+  -webkit-touch-callout: none;                /* no long-press menu on the cube */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;                 /* disable double-tap zoom for fast tapping */
 }
 
 header { text-align: center; padding: 24px 16px 4px; }
@@ -111,7 +116,7 @@ main {
 }
 .rate-box label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 7px; }
 .rate-box b { color: var(--accent2); }
-.rate-box input[type=range] { width: 100%; accent-color: var(--accent2); cursor: pointer; }
+.rate-box input[type=range] { width: 100%; height: 26px; accent-color: var(--accent2); cursor: pointer; }
 .card-info .name { font-weight: 700; }
 .card-info .desc { color: var(--muted); font-size: .8rem; margin: 2px 0; }
 .card-info .owned { color: var(--accent2); font-size: .76rem; font-weight: 600; }
@@ -167,5 +172,20 @@ footer {
 }
 
 @media (max-width: 760px) {
-  main { flex-direction: column; }
+  main { flex-direction: column; gap: 16px; margin: 14px auto; }
+  header { padding: 16px 14px 4px; }
+  header h1 { font-size: 1.7rem; }
+  .play { padding: 18px 16px 20px; }
+  #cube-count { font-size: 2.2rem; }
+  .buy-modes button { padding: 9px 0; }
+}
+@media (max-width: 380px) {
+  header h1 { font-size: 1.45rem; }
+  .tagline { font-size: .82rem; }
+  #cube-count { font-size: 1.9rem; }
+  .rates { font-size: .82rem; }
+  .buy-modes button { font-size: .72rem; }
+  .card { padding: 10px 11px; }
+  .card-info .desc { font-size: .75rem; }
+  footer { flex-direction: column; gap: 8px; }
 }
