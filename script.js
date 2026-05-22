@@ -45,7 +45,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -56,12 +56,12 @@ let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
 const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
-const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat()) * Math.pow(2, state.boosts.dblclick);
+const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick);
 const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
-const cps          = () => (baseCps() + state.boosts.flow) * Math.pow(2, state.boosts.dblcps);
+const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps);
 
 /* =================== HELPERS =================== */
 function fmt(n) {
@@ -405,18 +405,23 @@ function handleClick(e) {
   const type  = PUZZLES[(Math.random() * PUZZLES.length) | 0];
   const shiny = Math.random() < SHINY_CHANCE;
   let gain = perClick();
-  if (shiny) gain += SHINY[type];
+
+  if (shiny) {
+    const reward = SHINY[type];
+    gain += reward;
+    state.shinies++;
+    state.shinyBonus += reward;          // permanent: +reward to /click and /sec forever
+  }
 
   state.cubes += gain;
   state.total += gain;
-  if (shiny) state.shinies++;
 
   renderPuzzle(type, shiny);
   popAnim();
 
   if (shiny) {
     spawnFloat(e.clientX, e.clientY, '✨ +' + fmt(SHINY[type]) + ' ✨', 'shiny');
-    toast(`✨ SHINY ${prettyName(type)}!  +${fmt(SHINY[type])} cubes! ✨`, 'shiny');
+    toast(`✨ SHINY ${prettyName(type)}!  +${fmt(SHINY[type])} cubes — and +${fmt(SHINY[type])}/click & /sec forever! ✨`, 'shiny');
   } else {
     spawnFloat(e.clientX, e.clientY, '+' + fmt(gain));
   }
@@ -466,6 +471,7 @@ function load() {
     state.total      = d.total || 0;
     state.clickLevel = d.clickLevel || 0;
     state.shinies    = d.shinies || 0;
+    state.shinyBonus = d.shinyBonus || 0;
     state.lastSeen   = d.lastSeen || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
