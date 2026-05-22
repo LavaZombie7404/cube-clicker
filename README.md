@@ -1,7 +1,7 @@
 # 🧩 Cube Clicker
 
 A clicker game where every click turns the puzzle into a random WCA cube —
-2×2, 3×3, 4×4, 5×5, 6×6, 7×7, Pyraminx, Megaminx, or Square-1.
+2×2–7×7, Pyraminx, Megaminx, Square-1, Skewb, or Clock.
 
 Earn cubes, buy upgrades, and hire auto-solvers that earn cubes for you.
 

@@ -3,7 +3,7 @@
 /* =================== DATA =================== */
 const COLORS  = ['#f5f5f5', '#ffd500', '#d92b2b', '#ff7a1a', '#2b6fd9', '#28a745'];
 const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
-const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1'];
+const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1', 'skewb', 'clock'];
 
 const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
 const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
@@ -11,6 +11,7 @@ const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
   '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
   pyraminx: 800000, megaminx: 6000000, sq1: 1800000,
+  skewb: 900000, clock: 2000000,
 };
 
 const BUILDINGS = [
@@ -167,14 +168,71 @@ function flatPuzzle(type, pal, shiny) {
   return out;
 }
 
+// Skewb: a cube whose faces split into a centre diamond + 4 corner triangles.
+function skewbFace(quad, shadeF, pal) {
+  const [P0, P1, P2, P3] = quad;
+  const M0 = lerp(P0,P1,0.5), M1 = lerp(P1,P2,0.5),
+        M2 = lerp(P2,P3,0.5), M3 = lerp(P3,P0,0.5);
+  const pieces = [
+    [M0,M1,M2,M3],                                       // centre diamond
+    [P0,M0,M3], [P1,M1,M0], [P2,M2,M1], [P3,M3,M2],      // corner triangles
+  ];
+  let out = '';
+  for (const p of pieces) out += sticker(p, shade(pick(pal), shadeF), 0.1);
+  return out;
+}
+function skewbCube(pal, shiny) {
+  const u = 112, vd = u * 1.16;
+  const C = [150, 35 + u];
+  const RIGHT = [u, u*0.5], LEFT = [-u, u*0.5], DOWN = [0, vd];
+  const FACE = shiny ? { top:1, right:0.88, left:0.74 }
+                     : { top:1, right:0.78, left:0.58 };
+  const topFace   = [C, add(C,scale(RIGHT,-1)), add(add(C,scale(RIGHT,-1)),scale(LEFT,-1)), add(C,scale(LEFT,-1))];
+  const rightFace = [C, add(C,scale(LEFT,-1)),  add(add(C,scale(LEFT,-1)),scale(DOWN,1)),   add(C,scale(DOWN,1))];
+  const leftFace  = [C, add(C,scale(RIGHT,-1)), add(add(C,scale(RIGHT,-1)),scale(DOWN,1)),  add(C,scale(DOWN,1))];
+  return skewbFace(topFace,   FACE.top,   pal)
+       + skewbFace(rightFace, FACE.right, pal)
+       + skewbFace(leftFace,  FACE.left,  pal);
+}
+
+// Rubik's Clock: a 3x3 grid of clock dials with randomly-pointing hands.
+function clockPuzzle(pal, shiny) {
+  const body = shiny ? '#e8b400' : shade(pick(pal), 0.82);
+  const dial = shiny ? '#fff2b8' : '#ece3c8';
+  const ink  = '#15151c';
+  const grid = [92, 150, 208];
+  const ln = (x1,y1,x2,y2,w) =>
+    `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" `
+    + `stroke="${ink}" stroke-width="${w}" stroke-linecap="round"/>`;
+  let out = `<rect x="58" y="68" width="184" height="184" rx="30" fill="${shade(body,0.5)}"/>`
+          + `<rect x="58" y="58" width="184" height="184" rx="30" fill="${body}" stroke="${ink}" stroke-width="3"/>`;
+  for (const cy of grid) for (const cx of grid) {
+    out += `<circle cx="${cx}" cy="${cy}" r="26" fill="${dial}" stroke="${ink}" stroke-width="2"/>`;
+    for (let t = 0; t < 12; t++) {
+      const a = t * Math.PI / 6;
+      out += ln(cx+21*Math.sin(a), cy-21*Math.cos(a), cx+25*Math.sin(a), cy-25*Math.cos(a), 1.4);
+    }
+    const h = ((Math.random()*12)|0) * Math.PI / 6;
+    out += ln(cx, cy, cx+16*Math.sin(h), cy-16*Math.cos(h), 3.6);
+    out += `<circle cx="${cx}" cy="${cy}" r="3" fill="${ink}"/>`;
+  }
+  for (const py of [121, 179]) for (const px of [121, 179])
+    out += `<circle cx="${px}" cy="${py}" r="6.5" fill="${shiny ? '#fff6d0' : '#c8c8d2'}" stroke="${ink}" stroke-width="1.5"/>`;
+  return out;
+}
+
 function prettyName(t) {
   if (CUBES.includes(t)) return t.replace('x', '×');
-  return { pyraminx: 'Pyraminx', megaminx: 'Megaminx', sq1: 'Square-1' }[t];
+  return { pyraminx: 'Pyraminx', megaminx: 'Megaminx', sq1: 'Square-1',
+           skewb: 'Skewb', clock: 'Clock' }[t];
 }
 function renderPuzzle(type, shiny) {
   const pal = shiny ? SHINY_COLORS : COLORS;
   document.getElementById('cube-svg').innerHTML =
-    CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny) : flatPuzzle(type, pal, shiny);
+      CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny)
+    : type === 'skewb'     ? skewbCube(pal, shiny)
+    : type === 'clock'     ? clockPuzzle(pal, shiny)
+    :                        flatPuzzle(type, pal, shiny);
   const nameEl = document.getElementById('puzzle-name');
   nameEl.textContent = (shiny ? '✨ Shiny ' : '') + prettyName(type);
   nameEl.classList.toggle('shiny', !!shiny);
