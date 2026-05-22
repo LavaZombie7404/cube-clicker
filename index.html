@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cube Clicker</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%237c5cff'/></svg>">
-  <link rel="stylesheet" href="style.css">
+  <script>
+    // cache-buster: forces the browser to fetch the newest CSS/JS every load
+    // (skipped on file:// so the game still opens locally without a server)
+    var V = location.protocol === 'file:' ? '' : '?v=' + Date.now();
+    document.write('<link rel="stylesheet" href="style.css' + V + '">');
+  </script>
 </head>
 <body>
 
@@ -73,6 +78,6 @@
     <button id="reset-btn">Reset game</button>
   </footer>
 
-  <script src="script.js"></script>
+  <script>document.write('<script src="script.js' + V + '"><\/script>');</script>
 </body>
 </html>
