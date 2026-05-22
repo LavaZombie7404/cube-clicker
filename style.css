@@ -48,12 +48,17 @@ main {
 #per-second, #per-click { color: var(--text); font-weight: 600; }
 
 .cube {
-  margin: 12px auto 0; width: 300px; max-width: 100%;
+  position: relative; margin: 12px auto 0;
+  width: 300px; max-width: 100%; aspect-ratio: 1 / 1;
   cursor: pointer; user-select: none;
   filter: drop-shadow(0 14px 22px rgba(0,0,0,.55));
   transition: filter .15s ease;
 }
-.cube svg { width: 100%; height: auto; display: block; }
+.cube-layer {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; opacity: 0; transition: opacity .09s linear;
+}
+.cube-layer.show { opacity: 1; }
 .cube:hover { filter: drop-shadow(0 14px 32px rgba(124,92,255,.5)); }
 .cube.pop svg { animation: pop .18s ease; }
 @keyframes pop {

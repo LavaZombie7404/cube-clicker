@@ -272,13 +272,19 @@ function flushPuzzle() {
   pendingPuzzle = null;
   drawPuzzle(type, shiny);
 }
+let cubeLayers = null, frontLayer = 0;
 function drawPuzzle(type, shiny) {
+  if (!cubeLayers) cubeLayers = document.querySelectorAll('.cube-layer');
   const pal = shiny ? SHINY_COLORS : COLORS;
-  document.getElementById('cube-svg').innerHTML =
+  const back = cubeLayers[frontLayer ^ 1];          // render into the hidden layer...
+  back.innerHTML =
       CUBES.includes(type) ? isoCube(parseInt(type, 10), pal, shiny)
     : type === 'skewb'     ? skewbCube(pal, shiny)
     : type === 'clock'     ? clockPuzzle(pal, shiny)
     :                        flatPuzzle(type, pal, shiny);
+  cubeLayers[frontLayer].classList.remove('show');  // ...then cross-fade to it, so any
+  back.classList.add('show');                       // render glitch stays off-screen
+  frontLayer ^= 1;
   const nameEl = document.getElementById('puzzle-name');
   nameEl.textContent = (shiny ? '✨ Shiny ' : '') + prettyName(type);
   nameEl.classList.toggle('shiny', !!shiny);
