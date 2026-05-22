@@ -8,6 +8,7 @@ const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1', 'skewb', 'clock'];
 const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
 const SHINY_CHANCE = 0.0025;                              // base: 1 in 400 clicks
 const SHINY_UP_COST = 5e12;                               // Shiny Magnet: flat 5 trillion per level
+const AC_BASE = 5000;                                     // Auto-Clicker: base cost (x1.6 per level)
 const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
   '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
@@ -46,12 +47,13 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
 
 let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50, or 'max'
+let autoAcc = 0;                                          // fractional auto-click accumulator
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -64,6 +66,7 @@ const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boos
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
 const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps);
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
+const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
 
 /* =================== HELPERS =================== */
 function fmt(n) {
@@ -270,6 +273,19 @@ function buildShop() {
     </div>`;
   su.addEventListener('click', buyShinyUp);
 
+  const ac = document.getElementById('auto-clicker');
+  ac.innerHTML = `
+    <div class="card-info">
+      <div class="name">🤖 Auto-Clicker</div>
+      <div class="desc">Clicks the cube for you — puzzle swaps &amp; shiny rolls included.</div>
+      <div class="owned"><span id="ac-owned">0</span> owned &middot; <span id="ac-rate">0</span> clicks/sec</div>
+    </div>
+    <div class="card-cost">
+      <div class="cost" id="ac-cost">0</div>
+      <div class="sub">cubes</div>
+    </div>`;
+  ac.addEventListener('click', buyAutoClicker);
+
   const cu = document.getElementById('click-upgrade');
   cu.innerHTML = `
     <div class="card-info">
@@ -359,6 +375,13 @@ function updateUI() {
   toggleCard(document.getElementById('shiny-up'),
              document.getElementById('su-cost'), state.cubes >= SHINY_UP_COST);
 
+  const acC = autoClickerCost();
+  document.getElementById('ac-cost').textContent  = fmt(acC);
+  document.getElementById('ac-owned').textContent = state.autoClicker;
+  document.getElementById('ac-rate').textContent  = state.autoClicker;
+  toggleCard(document.getElementById('auto-clicker'),
+             document.getElementById('ac-cost'), state.cubes >= acC);
+
   const cc = clickCost();
   document.getElementById('cu-cost').textContent  = fmt(cc);
   document.getElementById('cu-owned').textContent = 'Level ' + state.clickLevel;
@@ -407,6 +430,9 @@ function buyClick() {
 function buyShinyUp() {
   bulkBuy(() => SHINY_UP_COST, () => state.shinyLevel++);
 }
+function buyAutoClicker() {
+  bulkBuy(autoClickerCost, () => state.autoClicker++);
+}
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
   bulkBuy(() => buildingCost(b), () => state.buildings[id]++);
@@ -425,7 +451,8 @@ function setBuyMode(amt) {
     btn.classList.toggle('active', btn.dataset.amt === String(amt)));
 }
 
-function handleClick(e) {
+// One click of the cube — manual or automatic. Applies cube/shiny gains, returns what happened.
+function clickGain() {
   const type  = PUZZLES[(Math.random() * PUZZLES.length) | 0];
   const shiny = Math.random() < shinyChance();
   let gain = perClick();
@@ -435,20 +462,19 @@ function handleClick(e) {
     gain += reward;
     state.shinies++;
     state.shinyBonus += reward;          // permanent: +reward to /click and /sec forever
+    toast(`✨ SHINY ${prettyName(type)}!  +${fmt(reward)} cubes — and +${fmt(reward)}/click & /sec forever! ✨`, 'shiny');
   }
 
   state.cubes += gain;
   state.total += gain;
-
-  renderPuzzle(type, shiny);
+  return { type, shiny, gain };
+}
+function handleClick(e) {
+  const r = clickGain();
+  renderPuzzle(r.type, r.shiny);
   popAnim();
-
-  if (shiny) {
-    spawnFloat(e.clientX, e.clientY, '✨ +' + fmt(SHINY[type]) + ' ✨', 'shiny');
-    toast(`✨ SHINY ${prettyName(type)}!  +${fmt(SHINY[type])} cubes — and +${fmt(SHINY[type])}/click & /sec forever! ✨`, 'shiny');
-  } else {
-    spawnFloat(e.clientX, e.clientY, '+' + fmt(gain));
-  }
+  if (r.shiny) spawnFloat(e.clientX, e.clientY, '✨ +' + fmt(SHINY[r.type]) + ' ✨', 'shiny');
+  else         spawnFloat(e.clientX, e.clientY, '+' + fmt(r.gain));
   updateUI();
 }
 function popAnim() {
@@ -479,6 +505,12 @@ function tick() {
   const gain = cps() / 10;        // runs 10× per second
   state.cubes += gain;
   state.total += gain;
+
+  autoAcc += state.autoClicker / 10;        // auto-clicker performs real clicks
+  let last = null;
+  while (autoAcc >= 1) { autoAcc--; last = clickGain(); }
+  if (last) renderPuzzle(last.type, last.shiny);
+
   updateUI();
 }
 
@@ -497,6 +529,7 @@ function load() {
     state.shinies    = d.shinies || 0;
     state.shinyBonus = d.shinyBonus || 0;
     state.shinyLevel = d.shinyLevel || 0;
+    state.autoClicker = d.autoClicker || 0;
     state.lastSeen   = d.lastSeen || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
