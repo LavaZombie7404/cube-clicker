@@ -105,6 +105,13 @@ main {
 }
 .card.special:hover { border-color: #ffe680; }
 .card.special .name { color: #ffd24a; }
+.rate-box {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 14px; margin: -4px 0 10px;
+}
+.rate-box label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 7px; }
+.rate-box b { color: var(--accent2); }
+.rate-box input[type=range] { width: 100%; accent-color: var(--accent2); cursor: pointer; }
 .card-info .name { font-weight: 700; }
 .card-info .desc { color: var(--muted); font-size: .8rem; margin: 2px 0; }
 .card-info .owned { color: var(--accent2); font-size: .76rem; font-weight: 600; }

@@ -47,7 +47,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, autoRate:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -431,7 +431,20 @@ function buyShinyUp() {
   bulkBuy(() => SHINY_UP_COST, () => state.shinyLevel++);
 }
 function buyAutoClicker() {
+  const before = state.autoClicker;
   bulkBuy(autoClickerCost, () => state.autoClicker++);
+  if (state.autoClicker > before) state.autoRate = state.autoClicker;  // run new clickers by default
+  refreshAutoRate();
+}
+function refreshAutoRate() {
+  if (state.autoRate > state.autoClicker) state.autoRate = state.autoClicker;
+  const box = document.getElementById('auto-rate-box');
+  const sl  = document.getElementById('auto-rate');
+  box.style.display = state.autoClicker > 0 ? '' : 'none';
+  sl.max   = state.autoClicker;
+  sl.value = state.autoRate;
+  document.getElementById('ar-val').textContent = state.autoRate;
+  document.getElementById('ar-max').textContent = state.autoClicker;
 }
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
@@ -506,7 +519,7 @@ function tick() {
   state.cubes += gain;
   state.total += gain;
 
-  autoAcc += state.autoClicker / 10;        // auto-clicker performs real clicks
+  autoAcc += state.autoRate / 10;           // auto-clicker performs real clicks (rate set by slider)
   let last = null;
   while (autoAcc >= 1) { autoAcc--; last = clickGain(); }
   if (last) renderPuzzle(last.type, last.shiny);
@@ -530,6 +543,7 @@ function load() {
     state.shinyBonus = d.shinyBonus || 0;
     state.shinyLevel = d.shinyLevel || 0;
     state.autoClicker = d.autoClicker || 0;
+    state.autoRate   = d.autoRate !== undefined ? d.autoRate : (d.autoClicker || 0);
     state.lastSeen   = d.lastSeen || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
@@ -561,6 +575,13 @@ function init() {
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.addEventListener('click', () =>
       setBuyMode(btn.dataset.amt === 'max' ? 'max' : parseInt(btn.dataset.amt, 10))));
+  const arSlider = document.getElementById('auto-rate');
+  arSlider.addEventListener('input', () => {
+    state.autoRate = parseInt(arSlider.value, 10) || 0;
+    document.getElementById('ar-val').textContent = state.autoRate;
+  });
+  arSlider.addEventListener('change', save);
+  refreshAutoRate();
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset everything and start over?')) {
       localStorage.removeItem(SAVE_KEY);
