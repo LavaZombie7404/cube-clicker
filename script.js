@@ -6,7 +6,7 @@ const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
 const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1'];
 
 const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
-const SHINY_CHANCE = 0.1;                                 // TEMP testing: 1 in 10 (real value: 0.0025 = 1 in 400)
+const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
 const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
   '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
@@ -36,6 +36,8 @@ const SAVE_KEY = 'cubeClickerSave';
 let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
+
+let buyMode = '1';                                        // '1' = buy one, 'max' = buy as many as affordable
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -270,30 +272,39 @@ function updateUI() {
 
 /* =================== ACTIONS =================== */
 function buyClick() {
-  const c = clickCost();
-  if (state.cubes < c) return;
-  state.cubes -= c;
-  state.clickLevel++;
-  updateUI();
-  save();
+  let bought = 0;
+  while (state.cubes >= clickCost() && (buyMode === 'max' || bought < 1)) {
+    state.cubes -= clickCost();
+    state.clickLevel++;
+    bought++;
+  }
+  if (bought) { updateUI(); save(); }
 }
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
-  const c = buildingCost(b);
-  if (state.cubes < c) return;
-  state.cubes -= c;
-  state.buildings[id]++;
-  updateUI();
-  save();
+  let bought = 0;
+  while (state.cubes >= buildingCost(b) && (buyMode === 'max' || bought < 1)) {
+    state.cubes -= buildingCost(b);
+    state.buildings[id]++;
+    bought++;
+  }
+  if (bought) { updateUI(); save(); }
 }
 function buyBoost(id) {
   const b = BOOSTS.find(x => x.id === id);
-  const c = boostCost(b);
-  if (state.cubes < c) return;
-  state.cubes -= c;
-  state.boosts[id]++;
-  updateUI();
-  save();
+  let bought = 0;
+  while (state.cubes >= boostCost(b) && (buyMode === 'max' || bought < 1)) {
+    state.cubes -= boostCost(b);
+    state.boosts[id]++;
+    bought++;
+  }
+  if (bought) { updateUI(); save(); }
+}
+function toggleBuyMode() {
+  buyMode = buyMode === 'max' ? '1' : 'max';
+  const btn = document.getElementById('buy-mode');
+  btn.textContent = 'Buy: ' + (buyMode === 'max' ? 'MAX' : '×1');
+  btn.classList.toggle('max', buyMode === 'max');
 }
 
 function handleClick(e) {
@@ -387,6 +398,7 @@ function init() {
   updateUI();
 
   document.getElementById('cube').addEventListener('click', handleClick);
+  document.getElementById('buy-mode').addEventListener('click', toggleBuyMode);
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset everything and start over?')) {
       localStorage.removeItem(SAVE_KEY);
