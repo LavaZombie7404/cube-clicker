@@ -32,17 +32,31 @@ const BOOSTS = [
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
 ];
 
+// Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
+const GEAR = [
+  { id:'lube',     name:'Cube Lube',          desc:'Smoother turns — faster clicks.',        baseCost:60,        perClick:3 },
+  { id:'spring',   name:'Spring Swap',        desc:'Custom tensions for a crisp feel.',      baseCost:700,       perClick:14 },
+  { id:'magnet',   name:'Magnet Mod',         desc:'Magnets snap every layer into place.',   baseCost:8000,      perClick:70 },
+  { id:'sticker',  name:'Stickerless Cube',   desc:'No stickers to peel — pure speed.',      baseCost:95000,     perClick:380 },
+  { id:'flagship', name:'Flagship Speedcube', desc:'Competition-grade hardware.',            baseCost:1100000,   perClick:1900 },
+  { id:'maglev',   name:'Maglev Core',        desc:'Frictionless magnetic levitation.',      baseCost:13000000,  perClick:9500 },
+  { id:'smart',    name:'Smart Cube',         desc:'A fully tricked-out main.',              baseCost:160000000, perClick:52000 },
+];
+
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
+GEAR.forEach(g => state.gear[g.id] = 0);
 
 let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50, or 'max'
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
-const perClick     = () => (1 + 2 * state.clickLevel + clickFlat()) * Math.pow(2, state.boosts.dblclick);
+const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
+const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
+const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat()) * Math.pow(2, state.boosts.dblclick);
 const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
@@ -273,6 +287,25 @@ function buildShop() {
     boostWrap.appendChild(card);
   });
 
+  const gearWrap = document.getElementById('gear');
+  GEAR.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'gear-' + g.id;
+    card.innerHTML = `
+      <div class="card-info">
+        <div class="name">${g.name}</div>
+        <div class="desc">${g.desc}</div>
+        <div class="owned"><span id="gowned-${g.id}">0</span> owned &middot; +${g.perClick}/click each</div>
+      </div>
+      <div class="card-cost">
+        <div class="cost" id="gcost-${g.id}">0</div>
+        <div class="sub">cubes</div>
+      </div>`;
+    card.addEventListener('click', () => buyGear(g.id));
+    gearWrap.appendChild(card);
+  });
+
   const wrap = document.getElementById('buildings');
   BUILDINGS.forEach(b => {
     const card = document.createElement('div');
@@ -319,6 +352,14 @@ function updateUI() {
                document.getElementById('bcost-' + b.id), state.cubes >= c);
   });
 
+  GEAR.forEach(g => {
+    const c = gearCost(g);
+    document.getElementById('gcost-' + g.id).textContent  = fmt(c);
+    document.getElementById('gowned-' + g.id).textContent = state.gear[g.id];
+    toggleCard(document.getElementById('gear-' + g.id),
+               document.getElementById('gcost-' + g.id), state.cubes >= c);
+  });
+
   BUILDINGS.forEach(b => {
     const c = buildingCost(b);
     document.getElementById('cost-' + b.id).textContent  = fmt(c);
@@ -345,6 +386,10 @@ function buyClick() {
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
   bulkBuy(() => buildingCost(b), () => state.buildings[id]++);
+}
+function buyGear(id) {
+  const g = GEAR.find(x => x.id === id);
+  bulkBuy(() => gearCost(g), () => state.gear[id]++);
 }
 function buyBoost(id) {
   const b = BOOSTS.find(x => x.id === id);
@@ -426,6 +471,8 @@ function load() {
       state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
     BOOSTS.forEach(b =>
       state.boosts[b.id] = (d.boosts && d.boosts[b.id]) || 0);
+    GEAR.forEach(g =>
+      state.gear[g.id] = (d.gear && d.gear[g.id]) || 0);
   } catch (e) { /* corrupt save: ignore and start fresh */ }
 }
 function offlineEarnings() {
