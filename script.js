@@ -56,6 +56,7 @@ let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50
 let autoAcc = 0;                                          // fractional auto-click accumulator
 let resetting = false;                                    // blocks autosave once a reset is in progress
 let lastFloatAt = 0;                                      // throttles the floating +N popups
+let autoRenderAt = 0;                                     // throttles the cube redraw from auto-clicks
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -549,9 +550,20 @@ function tick() {
   state.total += gain;
 
   autoAcc += state.autoRate / 10;           // auto-clicker performs real clicks (rate set by slider)
-  let last = null;
-  while (autoAcc >= 1) { autoAcc--; last = clickGain(); }
-  if (last) renderPuzzle(last.type, last.shiny);
+  let last = null, shinyHit = null;
+  while (autoAcc >= 1) {
+    autoAcc--;
+    last = clickGain();
+    if (last.shiny) shinyHit = last;
+  }
+  const show = shinyHit || last;            // prefer showing a shiny if one was hit this tick
+  if (show) {                               // redraw the cube calmly — not at the full click rate
+    const now = performance.now();
+    if (show.shiny || now - autoRenderAt >= 300) {
+      autoRenderAt = now;
+      renderPuzzle(show.type, show.shiny);
+    }
+  }
 
   updateUI();
 }
