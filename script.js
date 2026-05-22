@@ -54,6 +54,7 @@ GEAR.forEach(g => state.gear[g.id] = 0);
 
 let buyMode = 1;                                          // 1 / 2 / 5 / 10 / 50, or 'max'
 let autoAcc = 0;                                          // fractional auto-click accumulator
+let resetting = false;                                    // blocks autosave once a reset is in progress
 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
@@ -528,6 +529,7 @@ function tick() {
 }
 
 function save() {
+  if (resetting) return;
   state.lastSeen = Date.now();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   document.getElementById('save-status').textContent = 'saved ✓';
@@ -584,6 +586,7 @@ function init() {
   refreshAutoRate();
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset everything and start over?')) {
+      resetting = true;                       // stop autosave/beforeunload from re-writing the save
       localStorage.removeItem(SAVE_KEY);
       location.reload();
     }
