@@ -16,7 +16,7 @@ const BUILDINGS = [
 ];
 
 const BOOSTS = [
-  { id:'dblclick', name:'Double Click Power', desc:'×2 the cubes you earn per click.', baseCost:500,  growth:9 },
+  { id:'dblclick', name:'Double Click Power', desc:'×2 the cubes you earn per click.', baseCost:120,  growth:5 },
   { id:'dblcps',   name:'Double Auto Income', desc:'×2 the cubes your solvers make.',   baseCost:2500, growth:9 },
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
 ];
@@ -28,8 +28,8 @@ BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 
 /* =================== DERIVED VALUES =================== */
-const perClick     = () => (1 + state.clickLevel) * Math.pow(2, state.boosts.dblclick);
-const clickCost    = () => Math.floor(50 * Math.pow(1.7, state.clickLevel));
+const perClick     = () => (1 + 2 * state.clickLevel) * Math.pow(2, state.boosts.dblclick);
+const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
@@ -169,7 +169,7 @@ function buildShop() {
   cu.innerHTML = `
     <div class="card-info">
       <div class="name">Finger Training</div>
-      <div class="desc">+1 cube for every click.</div>
+      <div class="desc">+2 cubes per click, every level.</div>
       <div class="owned" id="cu-owned">Level 0</div>
     </div>
     <div class="card-cost">
