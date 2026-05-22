@@ -6,7 +6,7 @@ const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
 const PUZZLES = [...CUBES, 'pyraminx', 'megaminx', 'sq1'];
 
 const SHINY_COLORS = ['#ffd24a', '#ffc21a', '#ffe07a', '#f5b700'];
-const SHINY_CHANCE = 0.0025;                              // 1 in 400 clicks
+const SHINY_CHANCE = 0.1;                                 // TEMP testing: 1 in 10 (real value: 0.0025 = 1 in 400)
 const SHINY = {
   '2x2': 500000,  '3x3': 1200000, '4x4': 2500000,
   '5x5': 4500000, '6x6': 7000000, '7x7': 10000000,
