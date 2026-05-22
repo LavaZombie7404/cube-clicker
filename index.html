@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cube Clicker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%237c5cff'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>🧩 Cube Clicker</h1>
+    <p class="tagline">Click the puzzle. Collect them all.</p>
+  </header>
+
+  <main>
+    <section class="play">
+      <div class="counter">
+        <span id="cube-count">0</span>
+        <span class="counter-label">cubes</span>
+      </div>
+      <div class="rates">
+        <span id="per-second">0</span>/sec
+        &nbsp;•&nbsp;
+        <span id="per-click">1</span>/click
+      </div>
+
+      <div id="cube" class="cube" title="Click me!">
+        <svg id="cube-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <div id="puzzle-name" class="puzzle-name">3×3</div>
+      <p class="hint">↑ click the puzzle to earn cubes</p>
+    </section>
+
+    <aside class="shop">
+      <h2>Upgrades</h2>
+      <div id="click-upgrade" class="card"></div>
+
+      <h2>Boosts</h2>
+      <div id="boosts"></div>
+
+      <h2>Auto-Solvers</h2>
+      <div id="buildings"></div>
+    </aside>
+  </main>
+
+  <footer>
+    <span id="save-status">autosaves as you play</span>
+    <button id="reset-btn">Reset game</button>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

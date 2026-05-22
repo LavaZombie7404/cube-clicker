@@ -1,0 +1,127 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:#0e0e16; --panel:#181826; --panel2:#1f1f30; --line:#2a2a3e;
+  --accent:#7c5cff; --accent2:#00d4ff;
+  --text:#ececf2; --muted:#9a9ab0; --good:#3ad07a; --bad:#ff6b6b;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: radial-gradient(1200px 600px at 50% -10%, #2a2150 0%, var(--bg) 60%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header { text-align: center; padding: 24px 16px 4px; }
+header h1 { font-size: 2.1rem; letter-spacing: .5px; }
+.tagline { color: var(--muted); margin-top: 4px; font-size: .95rem; }
+
+main {
+  display: flex; gap: 22px;
+  max-width: 980px; margin: 18px auto; padding: 0 18px;
+  align-items: flex-start; flex-wrap: wrap;
+}
+
+/* ---- play area ---- */
+.play {
+  flex: 1 1 360px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 24px 26px;
+  text-align: center;
+}
+.counter { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+#cube-count {
+  font-size: 2.6rem; font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.counter-label { color: var(--muted); font-size: 1rem; }
+.rates { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+#per-second, #per-click { color: var(--text); font-weight: 600; }
+
+.cube {
+  margin: 12px auto 0; width: 300px; max-width: 100%;
+  cursor: pointer; user-select: none;
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.55));
+  transition: filter .15s ease;
+}
+.cube svg { width: 100%; height: auto; display: block; }
+.cube:hover { filter: drop-shadow(0 14px 32px rgba(124,92,255,.5)); }
+.cube.pop svg { animation: pop .18s ease; }
+@keyframes pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(.9); }
+  100% { transform: scale(1); }
+}
+.puzzle-name { font-size: 1.35rem; font-weight: 700; margin-top: 6px; }
+.hint { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+
+/* ---- shop ---- */
+.shop { flex: 1 1 300px; }
+.shop h2 {
+  font-size: .8rem; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); margin: 6px 4px 8px;
+}
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+  cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  transition: transform .08s ease, border-color .15s ease;
+}
+.card:hover { border-color: var(--accent); }
+.card:active { transform: scale(.98); }
+.card.locked { opacity: .5; cursor: not-allowed; }
+.card.locked:hover { border-color: var(--line); }
+.card-info .name { font-weight: 700; }
+.card-info .desc { color: var(--muted); font-size: .8rem; margin: 2px 0; }
+.card-info .owned { color: var(--accent2); font-size: .76rem; font-weight: 600; }
+.card-cost { text-align: right; white-space: nowrap; }
+.card-cost .cost { font-weight: 700; font-size: 1rem; }
+.card-cost .cost.ok { color: var(--good); }
+.card-cost .cost.no { color: var(--bad); }
+.card-cost .sub { color: var(--muted); font-size: .72rem; }
+
+/* ---- footer ---- */
+footer {
+  max-width: 980px; margin: 8px auto 44px; padding: 0 18px;
+  display: flex; justify-content: space-between; align-items: center;
+  color: var(--muted); font-size: .8rem;
+}
+#reset-btn {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); padding: 6px 12px;
+  border-radius: 8px; cursor: pointer; font-size: .8rem;
+}
+#reset-btn:hover { color: var(--bad); border-color: var(--bad); }
+
+/* ---- effects ---- */
+.float {
+  position: fixed; pointer-events: none; z-index: 50;
+  font-weight: 800; font-size: 1.2rem; color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,.7);
+  animation: floatUp .9s ease-out forwards;
+}
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -70px) scale(1.25); }
+}
+.toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 60;
+  background: var(--panel2); border: 1px solid var(--accent);
+  color: var(--text); padding: 10px 18px; border-radius: 10px;
+  font-size: .9rem; max-width: 90%; text-align: center;
+  animation: toast 5s ease forwards;
+}
+@keyframes toast {
+  0%        { opacity: 0; transform: translate(-50%, 10px); }
+  10%, 80%  { opacity: 1; transform: translate(-50%, 0); }
+  100%      { opacity: 0; transform: translate(-50%, 10px); }
+}
+
+@media (max-width: 760px) {
+  main { flex-direction: column; }
+}
