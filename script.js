@@ -75,7 +75,7 @@ const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClick
 function fmt(n) {
   n = Math.floor(n * 10) / 10;
   if (n < 1000) return (n % 1 === 0 ? String(n) : n.toFixed(1));
-  const units = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
+  const units = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'DDc', 'TDc', 'QaDc', 'QiDc', 'SxDc', 'SpDc', 'OcDc', 'NoDc', 'Vg'];
   let i = 0;
   while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
   return n.toFixed(2).replace(/\.?0+$/, '') + units[i];
