@@ -74,18 +74,30 @@ const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
 
 /* =================== HELPERS =================== */
+const UNITS = (function() {
+  const base = ['', 'K', 'M', 'B', 'T'];
+  const ones = ['', 'U', 'D', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+  const tens = ['', 'Dc', 'Vg', 'Tg', 'Qd', 'Qq', 'Sg', 'St', 'Og', 'Ng'];
+  for (let t = 0; t < 10; t++)
+    for (let o = 0; o < 10; o++) {
+      if (t * 10 + o < 4) continue;
+      base.push(ones[o] + tens[t]);
+    }
+  base.push('Ce');  // centillion = 10^303
+  return base;
+})();
+
 function fmt(n) {
   n = Math.floor(n * 10) / 10;
   if (n < 1000) return (n % 1 === 0 ? String(n) : n.toFixed(1));
-  const units = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'DDc', 'TDc', 'QaDc', 'QiDc', 'SxDc', 'SpDc', 'OcDc', 'NoDc', 'Vg'];
   let i = 0;
-  while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
-  if (i === units.length - 1 && n >= 1000) {
-    const exp = Math.floor(Math.log10(n));
-    const mantissa = n / Math.pow(10, exp);
-    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e+' + exp + units[i];
+  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++; }
+  if (i === UNITS.length - 1 && n >= 1000) {
+    const totalExp = Math.floor(Math.log10(n)) + i * 3;
+    const mantissa = n / Math.pow(10, Math.floor(Math.log10(n)));
+    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e' + totalExp;
   }
-  return n.toFixed(2).replace(/\.?0+$/, '') + units[i];
+  return n.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
