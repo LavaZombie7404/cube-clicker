@@ -69,12 +69,12 @@ let autoRenderAt = 0;                                     // throttles the cube 
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
 const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
-const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click);
+const perClick     = () => cap((1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click));
 const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
-const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps);
+const cps          = () => cap((baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps));
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
 
@@ -105,6 +105,8 @@ function fmt(n) {
   }
   return n.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
+const CAP      = 1e300;
+const cap      = n => Math.min(n, CAP);
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
 const add      = (p, q) => [p[0] + q[0], p[1] + q[1]];
@@ -560,12 +562,12 @@ function clickGain() {
     const reward = SHINY[type];
     gain += reward;
     state.shinies++;
-    state.shinyBonus += reward;          // permanent: +reward to /click and /sec forever
+    state.shinyBonus = cap(state.shinyBonus + reward);
     toast(`✨ SHINY ${prettyName(type)}!  +${fmt(reward)} cubes — and +${fmt(reward)}/click & /sec forever! ✨`, 'shiny');
   }
 
-  state.cubes += gain;
-  state.total += gain;
+  state.cubes = cap(state.cubes + gain);
+  state.total = cap(state.total + gain);
   return { type, shiny, gain };
 }
 function handleClick(e) {
@@ -606,8 +608,8 @@ function toast(msg, cls) {
 function tick() {
   const gain = cps() / 10;        // runs 10× per second
   if (!isFinite(gain)) return;
-  state.cubes += gain;
-  state.total += gain;
+  state.cubes = cap(state.cubes + gain);
+  state.total = cap(state.total + gain);
 
   autoAcc += state.autoRate / 10;           // auto-clicker performs real clicks (rate set by slider)
   let last = null, shinyHit = null;
@@ -659,9 +661,9 @@ function load() {
 function offlineEarnings() {
   const dt = Math.min((Date.now() - state.lastSeen) / 1000, 7200);  // cap 2h
   if (dt > 5 && cps() > 0) {
-    const earned = cps() * dt;
-    state.cubes += earned;
-    state.total += earned;
+    const earned = cap(cps() * dt);
+    state.cubes = cap(state.cubes + earned);
+    state.total = cap(state.total + earned);
     toast(`Welcome back! Your solvers earned ${fmt(earned)} cubes while you were away.`);
   }
 }
@@ -685,9 +687,9 @@ function init() {
   document.getElementById('secret-emoji').addEventListener('click', () => {
     const bonus = 1e24;
     const rateBonus = 2.5e23;
-    state.cubes += bonus;
-    state.total += bonus;
-    state.shinyBonus += rateBonus;
+    state.cubes = cap(state.cubes + bonus);
+    state.total = cap(state.total + bonus);
+    state.shinyBonus = cap(state.shinyBonus + rateBonus);
     toast('🧩 You found a secret! +1Sp cubes & +250Sx/click & /sec forever!');
     updateUI();
     save();
