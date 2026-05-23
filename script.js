@@ -54,7 +54,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, autoRate:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -498,6 +498,14 @@ function updateUI() {
     toggleCard(document.getElementById('b-' + b.id),
                document.getElementById('cost-' + b.id), state.cubes >= c);
   });
+
+  const pBox = document.getElementById('prestige-box');
+  const pCount = document.getElementById('prestige-count');
+  const wBtn = document.getElementById('win-btn');
+  pBox.style.display = (state.cubes >= 1e300 || state.prestige > 0) ? '' : 'none';
+  document.getElementById('prestige-btn').disabled = state.cubes < 1e300;
+  pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10';
+  wBtn.style.display = state.prestige >= 10 ? '' : 'none';
 }
 
 /* =================== ACTIONS =================== */
@@ -550,6 +558,38 @@ function setBuyMode(amt) {
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.amt === String(amt)));
   updateUI();
+}
+
+function doPrestige() {
+  if (state.cubes < 1e300) return;
+  if (!confirm('Prestige? You\'ll reset all cubes, upgrades, and buildings — but gain a prestige star!')) return;
+  state.prestige++;
+  state.cubes = 0;
+  state.total = 0;
+  state.clickLevel = 0;
+  state.shinies = 0;
+  state.shinyBonus = 0;
+  state.shinyLevel = 0;
+  state.autoClicker = 0;
+  state.autoRate = 0;
+  BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+  BOOSTS.forEach(b => state.boosts[b.id] = 0);
+  GEAR.forEach(g => state.gear[g.id] = 0);
+  autoAcc = 0;
+  refreshAutoRate();
+  renderPuzzle('3x3');
+  toast('⭐ Prestige ' + state.prestige + '! Everything reset — can you do it again?');
+  updateUI();
+  save();
+}
+
+function winGame() {
+  if (state.prestige < 10) return;
+  document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0e0e16;color:#ececf2;text-align:center;padding:20px;">'
+    + '<h1 style="font-size:3rem;margin-bottom:16px;">🏆 You Win! 🏆</h1>'
+    + '<p style="font-size:1.3rem;color:#9a9ab0;">You prestiged ' + state.prestige + ' times and conquered Cube Clicker!</p>'
+    + '<p style="font-size:1rem;color:#7c5cff;margin-top:12px;">Thanks for playing!</p>'
+    + '</div>';
 }
 
 // One click of the cube — manual or automatic. Applies cube/shiny gains, returns what happened.
@@ -649,6 +689,7 @@ function load() {
     state.shinyLevel = num(d.shinyLevel);
     state.autoClicker = num(d.autoClicker);
     state.autoRate   = d.autoRate !== undefined ? num(d.autoRate) : num(d.autoClicker);
+    state.prestige   = num(d.prestige);
     state.lastSeen   = num(d.lastSeen) || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = num(d.buildings && d.buildings[b.id]));
@@ -704,6 +745,8 @@ function init() {
   });
   arSlider.addEventListener('change', save);
   refreshAutoRate();
+  document.getElementById('prestige-btn').addEventListener('click', doPrestige);
+  document.getElementById('win-btn').addEventListener('click', winGame);
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset everything and start over?')) {
       resetting = true;                       // stop autosave/beforeunload from re-writing the save

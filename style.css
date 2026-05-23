@@ -79,6 +79,28 @@ main {
   text-shadow: 0 0 14px rgba(255,200,0,.9), 0 0 4px rgba(255,160,0,.7);
 }
 .hint { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.prestige-label { color: #ffd24a; font-size: .85rem; font-weight: 700; margin-bottom: 6px; }
+.prestige-btn {
+  background: linear-gradient(135deg, #ffd24a, #ff8c00);
+  color: #0e0e16; border: none; border-radius: 10px;
+  padding: 10px 24px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: transform .1s ease, box-shadow .15s ease;
+  box-shadow: 0 0 16px rgba(255,200,0,.4);
+}
+.prestige-btn:hover { transform: scale(1.05); box-shadow: 0 0 24px rgba(255,200,0,.7); }
+.win-btn {
+  display: none; margin-top: 14px;
+  background: linear-gradient(135deg, #7c5cff, #00d4ff);
+  color: #fff; border: none; border-radius: 12px;
+  padding: 12px 28px; font-size: 1.15rem; font-weight: 800;
+  cursor: pointer; animation: winPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(124,92,255,.5);
+}
+.win-btn:hover { transform: scale(1.05); }
+@keyframes winPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(124,92,255,.5); }
+  50% { box-shadow: 0 0 36px rgba(0,212,255,.7); }
+}
 
 /* ---- shop ---- */
 .shop { flex: 1 1 240px; }
