@@ -80,6 +80,11 @@ function fmt(n) {
   const units = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'DDc', 'TDc', 'QaDc', 'QiDc', 'SxDc', 'SpDc', 'OcDc', 'NoDc', 'Vg'];
   let i = 0;
   while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
+  if (i === units.length - 1 && n >= 1000) {
+    const exp = Math.floor(Math.log10(n));
+    const mantissa = n / Math.pow(10, exp);
+    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e+' + exp + units[i];
+  }
   return n.toFixed(2).replace(/\.?0+$/, '') + units[i];
 }
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
