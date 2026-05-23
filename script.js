@@ -396,34 +396,55 @@ function toggleCard(card, costEl, affordable) {
   costEl.classList.toggle('no', !affordable);
 }
 
+function maxAfford(baseCost, ratio, owned) {
+  let budget = state.cubes, count = 0, lvl = owned;
+  while (count < 1e6) {
+    const c = Math.floor(baseCost * Math.pow(ratio, lvl));
+    if (budget < c) break;
+    budget -= c;
+    lvl++;
+    count++;
+  }
+  return count;
+}
+function maxAffordFlat(cost) {
+  return Math.floor(state.cubes / cost);
+}
+
 function updateUI() {
   document.getElementById('cube-count').textContent = fmt(state.cubes);
   document.getElementById('per-second').textContent = fmt(cps());
   document.getElementById('per-click').textContent  = fmt(perClick());
   document.getElementById('shiny-count').textContent = state.shinies;
 
-  document.getElementById('su-cost').textContent = fmt(SHINY_UP_COST);
+  const isMax = buyMode === 'max';
+
+  const suMax = isMax ? maxAffordFlat(SHINY_UP_COST) : 0;
+  document.getElementById('su-cost').textContent = isMax ? fmt(SHINY_UP_COST) + ' (×' + fmt(suMax) + ')' : fmt(SHINY_UP_COST);
   document.getElementById('shiny-lvl').textContent =
     'Level ' + state.shinyLevel + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
   toggleCard(document.getElementById('shiny-up'),
              document.getElementById('su-cost'), state.cubes >= SHINY_UP_COST);
 
   const acC = autoClickerCost();
-  document.getElementById('ac-cost').textContent  = fmt(acC);
+  const acMax = isMax ? maxAfford(AC_BASE, 1.6, state.autoClicker) : 0;
+  document.getElementById('ac-cost').textContent  = isMax ? fmt(acC) + ' (×' + fmt(acMax) + ')' : fmt(acC);
   document.getElementById('ac-owned').textContent = state.autoClicker;
   document.getElementById('ac-rate').textContent  = state.autoClicker;
   toggleCard(document.getElementById('auto-clicker'),
              document.getElementById('ac-cost'), state.cubes >= acC);
 
   const cc = clickCost();
-  document.getElementById('cu-cost').textContent  = fmt(cc);
+  const ccMax = isMax ? maxAfford(15, 1.4, state.clickLevel) : 0;
+  document.getElementById('cu-cost').textContent  = isMax ? fmt(cc) + ' (×' + fmt(ccMax) + ')' : fmt(cc);
   document.getElementById('cu-owned').textContent = 'Level ' + state.clickLevel;
   toggleCard(document.getElementById('click-upgrade'),
              document.getElementById('cu-cost'), state.cubes >= cc);
 
   BOOSTS.forEach(b => {
     const c = boostCost(b);
-    document.getElementById('bcost-' + b.id).textContent  = fmt(c);
+    const bMax = isMax ? maxAfford(b.baseCost, b.growth, state.boosts[b.id]) : 0;
+    document.getElementById('bcost-' + b.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(bMax) + ')' : fmt(c);
     document.getElementById('bought-' + b.id).textContent = state.boosts[b.id];
     toggleCard(document.getElementById('boost-' + b.id),
                document.getElementById('bcost-' + b.id), state.cubes >= c);
@@ -431,7 +452,8 @@ function updateUI() {
 
   GEAR.forEach(g => {
     const c = gearCost(g);
-    document.getElementById('gcost-' + g.id).textContent  = fmt(c);
+    const gMax = isMax ? maxAfford(g.baseCost, 1.15, state.gear[g.id]) : 0;
+    document.getElementById('gcost-' + g.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(gMax) + ')' : fmt(c);
     document.getElementById('gowned-' + g.id).textContent = state.gear[g.id];
     toggleCard(document.getElementById('gear-' + g.id),
                document.getElementById('gcost-' + g.id), state.cubes >= c);
@@ -439,7 +461,8 @@ function updateUI() {
 
   BUILDINGS.forEach(b => {
     const c = buildingCost(b);
-    document.getElementById('cost-' + b.id).textContent  = fmt(c);
+    const bMax = isMax ? maxAfford(b.baseCost, 1.15, state.buildings[b.id]) : 0;
+    document.getElementById('cost-' + b.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(bMax) + ')' : fmt(c);
     document.getElementById('owned-' + b.id).textContent = state.buildings[b.id];
     toggleCard(document.getElementById('b-' + b.id),
                document.getElementById('cost-' + b.id), state.cubes >= c);
