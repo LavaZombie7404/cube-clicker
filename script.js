@@ -518,6 +518,7 @@ function setBuyMode(amt) {
   buyMode = amt;
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.amt === String(amt)));
+  updateUI();
 }
 
 // One click of the cube — manual or automatic. Applies cube/shiny gains, returns what happened.
