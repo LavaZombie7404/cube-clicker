@@ -31,6 +31,8 @@ const BOOSTS = [
   { id:'cf15',     name:'Magnetic Cube',      desc:'+15 cubes every click.',           baseCost:250,  growth:3, clickFlat:15 },
   { id:'cf20',     name:'Flagship Cube',      desc:'+20 cubes every click.',           baseCost:600,  growth:3, clickFlat:20 },
   { id:'dblcps',   name:'Double Auto Income', desc:'×2 the cubes your solvers make.',   baseCost:2500, growth:9 },
+  { id:'x5click',  name:'Penta Click Power', desc:'×5 the cubes you earn per click.',  baseCost:50000, growth:12 },
+  { id:'x5cps',    name:'Penta Auto Income', desc:'×5 the cubes your solvers make.',   baseCost:75000, growth:15 },
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
 ];
 
@@ -62,12 +64,12 @@ let autoRenderAt = 0;                                     // throttles the cube 
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
 const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
-const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick);
+const perClick     = () => (1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click);
 const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
-const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps);
+const cps          = () => (baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps);
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
 
