@@ -30,7 +30,7 @@ main {
 
 /* ---- play area ---- */
 .play {
-  flex: 1 1 360px;
+  flex: 1 1 280px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -81,7 +81,7 @@ main {
 .hint { color: var(--muted); font-size: .85rem; margin-top: 2px; }
 
 /* ---- shop ---- */
-.shop { flex: 1 1 300px; }
+.shop { flex: 1 1 240px; }
 .shop h2 {
   font-size: .8rem; text-transform: uppercase; letter-spacing: 1.5px;
   color: var(--muted); margin: 6px 4px 8px;
@@ -176,7 +176,7 @@ footer {
   100%      { opacity: 0; transform: translate(-50%, 10px); }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 580px) {
   main { flex-direction: column; gap: 16px; margin: 14px auto; }
   header { padding: 16px 14px 4px; }
   header h1 { font-size: 1.7rem; }
