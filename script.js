@@ -629,9 +629,11 @@ function init() {
   });
   document.getElementById('secret-emoji').addEventListener('click', () => {
     const bonus = 1e24;
+    const rateBonus = 2.5e23;
     state.cubes += bonus;
     state.total += bonus;
-    toast('🧩 You found a secret! +1 Septillion cubes!');
+    state.shinyBonus += rateBonus;
+    toast('🧩 You found a secret! +1Sp cubes & +250Sx/click & /sec forever!');
     updateUI();
     save();
   });
