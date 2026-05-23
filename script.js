@@ -605,6 +605,7 @@ function toast(msg, cls) {
 /* =================== TICK & SAVE =================== */
 function tick() {
   const gain = cps() / 10;        // runs 10× per second
+  if (!isFinite(gain)) return;
   state.cubes += gain;
   state.total += gain;
 
@@ -637,21 +638,22 @@ function load() {
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!d) return;
-    state.cubes      = isFinite(d.cubes) ? d.cubes : 0;
-    state.total      = isFinite(d.total) ? d.total : 0;
-    state.clickLevel = d.clickLevel || 0;
-    state.shinies    = d.shinies || 0;
-    state.shinyBonus = d.shinyBonus || 0;
-    state.shinyLevel = d.shinyLevel || 0;
-    state.autoClicker = d.autoClicker || 0;
-    state.autoRate   = d.autoRate !== undefined ? d.autoRate : (d.autoClicker || 0);
-    state.lastSeen   = d.lastSeen || Date.now();
+    const num = v => (typeof v === 'number' && isFinite(v)) ? v : 0;
+    state.cubes      = num(d.cubes);
+    state.total      = num(d.total);
+    state.clickLevel = num(d.clickLevel);
+    state.shinies    = num(d.shinies);
+    state.shinyBonus = num(d.shinyBonus);
+    state.shinyLevel = num(d.shinyLevel);
+    state.autoClicker = num(d.autoClicker);
+    state.autoRate   = d.autoRate !== undefined ? num(d.autoRate) : num(d.autoClicker);
+    state.lastSeen   = num(d.lastSeen) || Date.now();
     BUILDINGS.forEach(b =>
-      state.buildings[b.id] = (d.buildings && d.buildings[b.id]) || 0);
+      state.buildings[b.id] = num(d.buildings && d.buildings[b.id]));
     BOOSTS.forEach(b =>
-      state.boosts[b.id] = (d.boosts && d.boosts[b.id]) || 0);
+      state.boosts[b.id] = num(d.boosts && d.boosts[b.id]));
     GEAR.forEach(g =>
-      state.gear[g.id] = (d.gear && d.gear[g.id]) || 0);
+      state.gear[g.id] = num(d.gear && d.gear[g.id]));
   } catch (e) { /* corrupt save: ignore and start fresh */ }
 }
 function offlineEarnings() {
