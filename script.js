@@ -93,6 +93,7 @@ const UNITS = (function() {
 })();
 
 function fmt(n) {
+  if (!isFinite(n)) return '0';
   n = Math.floor(n * 10) / 10;
   if (n < 1000) return (n % 1 === 0 ? String(n) : n.toFixed(1));
   let i = 0;
@@ -636,8 +637,8 @@ function load() {
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!d) return;
-    state.cubes      = d.cubes || 0;
-    state.total      = d.total || 0;
+    state.cubes      = isFinite(d.cubes) ? d.cubes : 0;
+    state.total      = isFinite(d.total) ? d.total : 0;
     state.clickLevel = d.clickLevel || 0;
     state.shinies    = d.shinies || 0;
     state.shinyBonus = d.shinyBonus || 0;
