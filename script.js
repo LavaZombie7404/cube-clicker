@@ -620,6 +620,13 @@ function init() {
   updateUI();
 
   document.getElementById('cube').addEventListener('click', handleClick);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      const box = document.getElementById('cube').getBoundingClientRect();
+      handleClick({ clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
+    }
+  });
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.addEventListener('click', () =>
       setBuyMode(btn.dataset.amt === 'max' ? 'max' : parseInt(btn.dataset.amt, 10))));
