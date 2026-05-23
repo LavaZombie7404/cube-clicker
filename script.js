@@ -69,12 +69,13 @@ let autoRenderAt = 0;                                     // throttles the cube 
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
 const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
-const perClick     = () => cap((1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click));
+const prestigeMult = () => Math.pow(2, state.prestige);
+const perClick     = () => cap((1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click) * prestigeMult());
 const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
 const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
 const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
 const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
-const cps          = () => cap((baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps));
+const cps          = () => cap((baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps) * prestigeMult());
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
 
