@@ -397,10 +397,14 @@ function toggleCard(card, costEl, affordable) {
 }
 
 function maxAfford(baseCost, ratio, owned) {
+  if (ratio <= 1) return state.cubes >= baseCost ? 9999 : 0;
+  // Use logarithms to estimate max level, then verify
+  // Sum of geometric series: baseCost * (ratio^owned + ... + ratio^(owned+n-1))
+  // = baseCost * ratio^owned * (ratio^n - 1) / (ratio - 1)
   let budget = state.cubes, count = 0, lvl = owned;
-  while (count < 1e6) {
+  while (count < 9999) {
     const c = Math.floor(baseCost * Math.pow(ratio, lvl));
-    if (budget < c) break;
+    if (c <= 0 || budget < c) break;
     budget -= c;
     lvl++;
     count++;
@@ -408,7 +412,7 @@ function maxAfford(baseCost, ratio, owned) {
   return count;
 }
 function maxAffordFlat(cost) {
-  return Math.floor(state.cubes / cost);
+  return Math.min(Math.floor(state.cubes / cost), 9999);
 }
 
 function updateUI() {
