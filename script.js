@@ -627,6 +627,14 @@ function init() {
       handleClick({ clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
     }
   });
+  document.getElementById('secret-emoji').addEventListener('click', () => {
+    const bonus = 1e24;
+    state.cubes += bonus;
+    state.total += bonus;
+    toast('🧩 You found a secret! +1 Septillion cubes!');
+    updateUI();
+    save();
+  });
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.addEventListener('click', () =>
       setBuyMode(btn.dataset.amt === 'max' ? 'max' : parseInt(btn.dataset.amt, 10))));
