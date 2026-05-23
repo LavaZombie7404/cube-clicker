@@ -621,7 +621,7 @@ function init() {
 
   document.getElementById('cube').addEventListener('click', handleClick);
   document.addEventListener('keydown', e => {
-    if (e.code === 'Space' && !e.repeat) {
+    if (e.code === 'Space') {
       e.preventDefault();
       const box = document.getElementById('cube').getBoundingClientRect();
       handleClick({ clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
