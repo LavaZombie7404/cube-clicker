@@ -24,6 +24,11 @@ const BUILDINGS = [
   { id:'robot',   name:'Solver Robot', desc:'Never gets tired, never blinks.',        baseCost:170000,    cps:340 },
   { id:'arena',   name:'WCA Arena',    desc:'An arena packed with cubers.',           baseCost:2200000,   cps:2100 },
   { id:'ai',      name:'Cubing A.I.',  desc:'Invents new puzzles, then solves them.', baseCost:28000000,  cps:14000 },
+  { id:'lab',     name:'Cube Lab',     desc:'Researches optimal solutions 24/7.',     baseCost:350000000, cps:90000 },
+  { id:'portal',  name:'Cube Portal',  desc:'Harvests cubes from parallel dimensions.', baseCost:5e9,    cps:600000 },
+  { id:'planet',  name:'Cube Planet',  desc:'An entire world devoted to cubing.',     baseCost:75e9,      cps:4000000 },
+  { id:'galaxy',  name:'Cube Galaxy',  desc:'Billions of stars, all solving cubes.',  baseCost:1e12,      cps:28000000 },
+  { id:'void',    name:'The Void Cube',desc:'Solves itself across spacetime.',        baseCost:15e12,     cps:200000000 },
 ];
 
 const BOOSTS = [
