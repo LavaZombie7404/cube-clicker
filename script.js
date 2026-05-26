@@ -44,8 +44,12 @@ const BOOSTS = [
   { id:'x5click',  name:'Penta Click Power', desc:'×5 the cubes you earn per click.',  baseCost:50000, growth:12 },
   { id:'x5cps',    name:'Penta Auto Income', desc:'×5 the cubes your solvers make.',   baseCost:75000, growth:15 },
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
-  { id:'x10all',   name:'Decuple Everything', desc:'×10 cubes from clicks AND auto income.', baseCost:1e9, growth:100 },
-  { id:'x20all',   name:'Vigecuple Everything', desc:'×20 cubes from clicks AND auto income.', baseCost:1e15, growth:400 },
+  { id:'x10all',   name:'Decuple Everything',       desc:'×10 cubes from clicks AND auto income.',   baseCost:1e9,  growth:100    },
+  { id:'x20all',   name:'Vigecuple Everything',     desc:'×20 cubes from clicks AND auto income.',   baseCost:1e15, growth:400    },
+  { id:'x50all',   name:'Quinquage Everything',     desc:'×50 cubes from clicks AND auto income.',   baseCost:1e25, growth:2000   },
+  { id:'x100all',  name:'Centuple Everything',      desc:'×100 cubes from clicks AND auto income.',  baseCost:1e40, growth:10000  },
+  { id:'x200all',  name:'Ducentuple Everything',    desc:'×200 cubes from clicks AND auto income.',  baseCost:1e60, growth:50000  },
+  { id:'x500all',  name:'Quingentuple Everything',  desc:'×500 cubes from clicks AND auto income.',  baseCost:1e90, growth:250000 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -84,6 +88,10 @@ const perClick     = () => cap(
     .mul(D(5).pow(state.boosts.x5click))
     .mul(D(10).pow(state.boosts.x10all))
     .mul(D(20).pow(state.boosts.x20all))
+    .mul(D(50).pow(state.boosts.x50all))
+    .mul(D(100).pow(state.boosts.x100all))
+    .mul(D(200).pow(state.boosts.x200all))
+    .mul(D(500).pow(state.boosts.x500all))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -97,6 +105,10 @@ const cps          = () => cap(
     .mul(D(5).pow(state.boosts.x5cps))
     .mul(D(10).pow(state.boosts.x10all))
     .mul(D(20).pow(state.boosts.x20all))
+    .mul(D(50).pow(state.boosts.x50all))
+    .mul(D(100).pow(state.boosts.x100all))
+    .mul(D(200).pow(state.boosts.x200all))
+    .mul(D(500).pow(state.boosts.x500all))
     .mul(prestigeMult())
     .mul(winMult())
 );
