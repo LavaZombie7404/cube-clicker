@@ -715,16 +715,19 @@ function setCustomBuyMode() {
 
 // Prestige reward tiers: cubes threshold → stars gained. Highest match wins.
 const PRESTIGE_TIERS = [
-  { threshold: '1e1000000000000', stars: 10, label: '1e1T'   },
-  { threshold: '1e100000000000',  stars:  9, label: '1e100B' },
-  { threshold: '1e10000000000',   stars:  8, label: '1e10B'  },
-  { threshold: '1e1000000000',    stars:  7, label: '1e1B'   },
-  { threshold: '1e100000000',     stars:  6, label: '1e100M' },
-  { threshold: '1e10000000',      stars:  5, label: '1e10M'  },
-  { threshold: '1e1000000',       stars:  4, label: '1e1M'   },
-  { threshold: '1e100000',        stars:  3, label: '1e100K' },
-  { threshold: '1e10000',         stars:  2, label: '1e10K'  },
-  { threshold: '1e300',           stars:  1, label: '1e300'  },
+  { threshold: '1e1000000000000000', stars: 13, label: '1e1Qa'  },
+  { threshold: '1e100000000000000',  stars: 12, label: '1e100T' },
+  { threshold: '1e10000000000000',   stars: 11, label: '1e10T'  },
+  { threshold: '1e1000000000000',    stars: 10, label: '1e1T'   },
+  { threshold: '1e100000000000',     stars:  9, label: '1e100B' },
+  { threshold: '1e10000000000',      stars:  8, label: '1e10B'  },
+  { threshold: '1e1000000000',       stars:  7, label: '1e1B'   },
+  { threshold: '1e100000000',        stars:  6, label: '1e100M' },
+  { threshold: '1e10000000',         stars:  5, label: '1e10M'  },
+  { threshold: '1e1000000',          stars:  4, label: '1e1M'   },
+  { threshold: '1e100000',           stars:  3, label: '1e100K' },
+  { threshold: '1e10000',            stars:  2, label: '1e10K'  },
+  { threshold: '1e300',              stars:  1, label: '1e300'  },
 ];
 function doPrestige() {
   if (state.cubes.lt('1e300')) return;
