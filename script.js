@@ -50,6 +50,7 @@ const BOOSTS = [
   { id:'x100all',  name:'Centuple Everything',      desc:'×100 cubes from clicks AND auto income.',  baseCost:1e40, growth:10000  },
   { id:'x200all',  name:'Ducentuple Everything',    desc:'×200 cubes from clicks AND auto income.',  baseCost:1e60, growth:50000  },
   { id:'x500all',  name:'Quingentuple Everything',  desc:'×500 cubes from clicks AND auto income.',  baseCost:1e90, growth:250000 },
+  { id:'x5000all', name:'Quinmillicuple Everything', desc:'×5000 cubes from clicks AND auto income. Unlocked at 50 prestiges.', baseCost:1e200, growth:5e7, unlockAt:50 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -92,6 +93,7 @@ const perClick     = () => cap(
     .mul(D(100).pow(state.boosts.x100all))
     .mul(D(200).pow(state.boosts.x200all))
     .mul(D(500).pow(state.boosts.x500all))
+    .mul(D(5000).pow(state.boosts.x5000all))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -109,6 +111,7 @@ const cps          = () => cap(
     .mul(D(100).pow(state.boosts.x100all))
     .mul(D(200).pow(state.boosts.x200all))
     .mul(D(500).pow(state.boosts.x500all))
+    .mul(D(5000).pow(state.boosts.x5000all))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -606,12 +609,15 @@ function updateUI() {
              document.getElementById('cu-cost'), state.cubes.gte(cc));
 
   BOOSTS.forEach(b => {
+    const card = document.getElementById('boost-' + b.id);
+    const locked = b.unlockAt && state.prestige < b.unlockAt;
+    card.style.display = locked ? 'none' : '';
+    if (locked) return;
     const c = boostCost(b);
     const bMax = isMax ? maxAfford(b.baseCost, b.growth, state.boosts[b.id]) : 0;
     document.getElementById('bcost-' + b.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(bMax) + ')' : fmtHTML(c);
     document.getElementById('bought-' + b.id).textContent = state.boosts[b.id];
-    toggleCard(document.getElementById('boost-' + b.id),
-               document.getElementById('bcost-' + b.id), state.cubes.gte(c));
+    toggleCard(card, document.getElementById('bcost-' + b.id), state.cubes.gte(c));
   });
 
   GEAR.forEach(g => {
