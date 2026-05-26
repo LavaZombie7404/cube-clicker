@@ -124,16 +124,17 @@ function illionName(n) {
   return (_ILL_ONES_P[u] + _ILL_TENS_P[t] + _ILL_HUND_P[h]).replace(/[ia]$/, '') + 'illion';
 }
 
-// UNITS[i] = abbreviation for 10^(3i); NAMES[i] = full name. Indices 0..999.
-// Tier 999 = novemnonagintanongentillion (10^2997), the last name the
-// Conway-Wechsler generator can build before needing a "thousands" prefix.
+// UNITS[i] = abbreviation for 10^(3i); NAMES[i] = full name. Suffix table
+// covers up to tier 333 (10^999); past 1e1000 fmt switches to scientific.
 const UNITS = [];
 const NAMES = [];
-for (let i = 0; i <= 999; i++) {
+for (let i = 0; i <= 333; i++) {
   if (i === 0)      { UNITS.push('');  NAMES.push(''); }
   else if (i === 1) { UNITS.push('K'); NAMES.push('thousand'); }
   else              { UNITS.push(illionAbbr(i - 1)); NAMES.push(illionName(i - 1)); }
 }
+
+const SCI_THRESHOLD = D(10).pow(1000);   // ≥ 1e1000 → scientific notation.
 
 // Returns { i, mantissa } for a Decimal d >= 1000. Handles the FP edge where
 // log10/floor underestimates the exponent and mantissa lands ≥ 1000.
@@ -160,12 +161,12 @@ function fmt(n) {
   if (n == null) return '0';
   const d = D(n);
   if (!d.isFinite()) return '0';
+  if (d.gte(SCI_THRESHOLD)) return _bigFallback(d);
   if (d.lt(1000)) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
   const { i, mantissa } = _tier(d);
-  if (i === UNITS.length - 1 && mantissa >= 1000) return _bigFallback(d);
   return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
 
@@ -174,12 +175,12 @@ function fmtHTML(n) {
   if (n == null) return '0';
   const d = D(n);
   if (!d.isFinite()) return '0';
+  if (d.gte(SCI_THRESHOLD)) return _bigFallback(d);
   if (d.lt(1000)) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
   const { i, mantissa } = _tier(d);
-  if (i === UNITS.length - 1 && mantissa >= 1000) return _bigFallback(d);
   const num  = mantissa.toFixed(2).replace(/\.?0+$/, '');
   const name = NAMES[i];
   return name ? `${num}<span class="num-suffix" title="${name}">${UNITS[i]}</span>` : num + UNITS[i];
