@@ -126,6 +126,20 @@ for (let i = 0; i <= 201; i++) {
   else              { UNITS.push(illionAbbr(i - 1)); NAMES.push(illionName(i - 1)); }
 }
 
+// Returns { i, mantissa } for a Decimal d >= 1000. Handles the FP edge where
+// log10/floor underestimates the exponent and mantissa lands ≥ 1000.
+function _tier(d) {
+  const expFloor = d.log10().floor().toNumber();
+  let i = Math.floor(expFloor / 3);
+  if (i >= UNITS.length) i = UNITS.length - 1;
+  let mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  while (mantissa >= 1000 && i < UNITS.length - 1) {
+    i++;
+    mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  }
+  return { i, mantissa };
+}
+
 // fmt accepts either a Decimal or a plain Number. Returns a plain string (no HTML).
 function fmt(n) {
   if (n == null) return '0';
@@ -135,10 +149,7 @@ function fmt(n) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
-  const expFloor = d.log10().floor().toNumber();
-  let i = Math.floor(expFloor / 3);
-  if (i >= UNITS.length) i = UNITS.length - 1;
-  const mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  const { i, mantissa } = _tier(d);
   if (i === UNITS.length - 1 && mantissa >= 1000) {
     return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
   }
@@ -154,10 +165,7 @@ function fmtHTML(n) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
-  const expFloor = d.log10().floor().toNumber();
-  let i = Math.floor(expFloor / 3);
-  if (i >= UNITS.length) i = UNITS.length - 1;
-  const mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  const { i, mantissa } = _tier(d);
   if (i === UNITS.length - 1 && mantissa >= 1000) {
     return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
   }
