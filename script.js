@@ -629,7 +629,13 @@ function updateUI() {
   const wBtn = document.getElementById('win-btn');
   const prestigeReady = state.cubes.gte('1e300');
   pBox.style.display = (prestigeReady || state.prestige > 0) ? '' : 'none';
-  document.getElementById('prestige-btn').disabled = !prestigeReady;
+  const upcomingTier = PRESTIGE_TIERS.find(t => state.cubes.gte(t.threshold));
+  const upcomingGain = upcomingTier ? upcomingTier.stars : 1;
+  const pBtn = document.getElementById('prestige-btn');
+  pBtn.disabled = !prestigeReady;
+  pBtn.textContent = prestigeReady && upcomingGain > 1
+    ? '⭐ Prestige (+' + upcomingGain + ' stars)'
+    : '⭐ Prestige';
   pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10'
     + (state.wins > 0 ? '   🏆 Wins: ' + state.wins + ' (×' + fmt(winMult()) + ')' : '');
   wBtn.style.display = state.prestige >= 10 ? '' : 'none';
