@@ -645,8 +645,13 @@ function setBuyMode(amt) {
 
 function doPrestige() {
   if (state.cubes.lt('1e300')) return;
-  if (!confirm('Prestige? You\'ll reset all cubes, upgrades, and buildings — but gain a prestige star!')) return;
-  state.prestige++;
+  // 1e10000+ cubes at prestige time grants 2 stars instead of 1.
+  const gain = state.cubes.gte('1e10000') ? 2 : 1;
+  const msg = gain === 2
+    ? 'Prestige? You\'ll reset all cubes, upgrades, and buildings — but gain TWO prestige stars (1e10000 bonus)!'
+    : 'Prestige? You\'ll reset all cubes, upgrades, and buildings — but gain a prestige star!';
+  if (!confirm(msg)) return;
+  state.prestige += gain;
   state.cubes = D(0);
   state.total = D(0);
   state.clickLevel = 0;
@@ -661,7 +666,7 @@ function doPrestige() {
   autoAcc = 0;
   refreshAutoRate();
   renderPuzzle('3x3');
-  toast('⭐ Prestige ' + state.prestige + '! Everything reset — can you do it again?');
+  toast((gain === 2 ? '⭐⭐ +2 Prestige! ' : '⭐ Prestige ') + state.prestige + '! Everything reset — can you do it again?');
   updateUI();
   save();
 }
