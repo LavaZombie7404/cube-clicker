@@ -158,8 +158,10 @@ function _tier(d) {
 
 // For values past the suffix table, emit Decimal's own big-number form
 // (scientific for "small" megabignums, tower notation for absurd ones).
+// Exponents are comma-grouped so 1e3450 reads as 1e+3,450.
 function _bigFallback(d) {
-  return d.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
+  const s = d.toExponential(2).replace(/\.?0+e/, 'e');
+  return s.replace(/e([+-])(\d+)/, (_, sign, exp) => 'e' + sign + Number(exp).toLocaleString('en-US'));
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
