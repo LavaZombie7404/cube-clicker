@@ -645,16 +645,20 @@ function setBuyMode(amt) {
 
 // Prestige reward tiers: cubes threshold → stars gained. Highest match wins.
 const PRESTIGE_TIERS = [
-  { threshold: '1e100000', stars: 3 },
-  { threshold: '1e10000',  stars: 2 },
-  { threshold: '1e300',    stars: 1 },
+  { threshold: '1e100000000', stars: 6, label: '1e100M' },
+  { threshold: '1e10000000',  stars: 5, label: '1e10M'  },
+  { threshold: '1e1000000',   stars: 4, label: '1e1M'   },
+  { threshold: '1e100000',    stars: 3, label: '1e100K' },
+  { threshold: '1e10000',     stars: 2, label: '1e10K'  },
+  { threshold: '1e300',       stars: 1, label: '1e300'  },
 ];
 function doPrestige() {
   if (state.cubes.lt('1e300')) return;
   const tier = PRESTIGE_TIERS.find(t => state.cubes.gte(t.threshold));
   const gain = tier ? tier.stars : 1;
-  const bonusMsg = gain > 1 ? ` — but gain ${gain} prestige stars (1e${gain === 3 ? '100000' : '10000'} bonus)!`
-                            : ' — but gain a prestige star!';
+  const bonusMsg = gain > 1
+    ? ` — but gain ${gain} prestige stars (${tier.label} bonus)!`
+    : ' — but gain a prestige star!';
   if (!confirm('Prestige? You\'ll reset all cubes, upgrades, and buildings' + bonusMsg)) return;
   state.prestige += gain;
   state.cubes = D(0);
