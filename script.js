@@ -89,11 +89,13 @@ const UNITS = (function() {
       if (t * 10 + o < 4) continue;
       base.push(ones[o] + tens[t]);
     }
-  base.push('Ce');  // centillion = 10^303
+  base.push('Ce');   // centillion   = 10^303
+  base.push('UCe');  // uncentillion = 10^306 (max usable: JS Number max ≈ 1.8e308)
   return base;
 })();
 
 function fmt(n) {
+  if (n === Infinity) return '∞';
   if (!isFinite(n)) return '0';
   n = Math.floor(n * 10) / 10;
   if (n < 1000) return (n % 1 === 0 ? String(n) : n.toFixed(1));
@@ -106,7 +108,7 @@ function fmt(n) {
   }
   return n.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
-const CAP      = 1e300;
+const CAP      = Number.MAX_VALUE;  // ≈ 1.8e308 — covers everything up to UCe
 const cap      = n => Math.min(n, CAP);
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
