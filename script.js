@@ -117,10 +117,12 @@ function illionName(n) {
   return (_ILL_ONES_P[u] + _ILL_TENS_P[t] + _ILL_HUND_P[h]).replace(/[ia]$/, '') + 'illion';
 }
 
-// UNITS[i] = abbreviation for 10^(3i); NAMES[i] = full name. Indices 0..201 (up to ducentillion).
+// UNITS[i] = abbreviation for 10^(3i); NAMES[i] = full name. Indices 0..999.
+// Tier 999 = novemnonagintanongentillion (10^2997), the last name the
+// Conway-Wechsler generator can build before needing a "thousands" prefix.
 const UNITS = [];
 const NAMES = [];
-for (let i = 0; i <= 201; i++) {
+for (let i = 0; i <= 999; i++) {
   if (i === 0)      { UNITS.push('');  NAMES.push(''); }
   else if (i === 1) { UNITS.push('K'); NAMES.push('thousand'); }
   else              { UNITS.push(illionAbbr(i - 1)); NAMES.push(illionName(i - 1)); }
@@ -140,6 +142,12 @@ function _tier(d) {
   return { i, mantissa };
 }
 
+// For values past the suffix table, emit Decimal's own big-number form
+// (scientific for "small" megabignums, tower notation for absurd ones).
+function _bigFallback(d) {
+  return d.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
+}
+
 // fmt accepts either a Decimal or a plain Number. Returns a plain string (no HTML).
 function fmt(n) {
   if (n == null) return '0';
@@ -150,9 +158,7 @@ function fmt(n) {
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
   const { i, mantissa } = _tier(d);
-  if (i === UNITS.length - 1 && mantissa >= 1000) {
-    return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
-  }
+  if (i === UNITS.length - 1 && mantissa >= 1000) return _bigFallback(d);
   return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
 
@@ -166,17 +172,15 @@ function fmtHTML(n) {
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
   const { i, mantissa } = _tier(d);
-  if (i === UNITS.length - 1 && mantissa >= 1000) {
-    return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
-  }
+  if (i === UNITS.length - 1 && mantissa >= 1000) return _bigFallback(d);
   const num  = mantissa.toFixed(2).replace(/\.?0+$/, '');
   const name = NAMES[i];
   return name ? `${num}<span class="num-suffix" title="${name}">${UNITS[i]}</span>` : num + UNITS[i];
 }
 
-const CAP_TIER = 201;                          // ducentillion = 10^603 — soft display ceiling.
-const CAP      = D(10).pow(CAP_TIER * 3);
-const cap      = n => D.min(D(n), CAP);
+// No hard cap — break_eternity.js handles arbitrarily large values. cap() just
+// coerces to Decimal so callers can keep using `state.cubes = cap(...)`.
+const cap      = n => D(n);
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
 const add      = (p, q) => [p[0] + q[0], p[1] + q[1]];
