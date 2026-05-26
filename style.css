@@ -89,7 +89,7 @@ main {
 }
 .prestige-btn:hover { transform: scale(1.05); box-shadow: 0 0 24px rgba(255,200,0,.7); }
 .win-btn {
-  display: none; margin-top: 14px;
+  margin-top: 14px;
   background: linear-gradient(135deg, #7c5cff, #00d4ff);
   color: #fff; border: none; border-radius: 12px;
   padding: 12px 28px; font-size: 1.15rem; font-weight: 800;

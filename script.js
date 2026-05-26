@@ -682,11 +682,25 @@ function doPrestige() {
 
 function winGame() {
   if (state.prestige < 10) return;
-  document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0e0e16;color:#ececf2;text-align:center;padding:20px;">'
-    + '<h1 style="font-size:3rem;margin-bottom:16px;">🏆 You Win! 🏆</h1>'
+  const overlay = document.createElement('div');
+  overlay.id = 'win-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,22,.96);color:#ececf2;text-align:center;padding:20px;z-index:9999;';
+  overlay.innerHTML =
+      '<h1 style="font-size:3rem;margin-bottom:16px;">🏆 You Win! 🏆</h1>'
     + '<p style="font-size:1.3rem;color:#9a9ab0;">You prestiged ' + state.prestige + ' times and conquered Cube Clicker!</p>'
-    + '<p style="font-size:1rem;color:#7c5cff;margin-top:12px;">Thanks for playing!</p>'
+    + '<p style="font-size:1rem;color:#7c5cff;margin:12px 0 24px;">Thanks for playing!</p>'
+    + '<div style="display:flex;gap:14px;">'
+    +   '<button id="win-continue" class="win-btn" style="margin:0;">Continue playing</button>'
+    +   '<button id="win-restart"  class="win-btn" style="margin:0;background:linear-gradient(135deg,#d92b2b,#ff7a1a);">Restart from scratch</button>'
     + '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('win-continue').addEventListener('click', () => overlay.remove());
+  document.getElementById('win-restart').addEventListener('click', () => {
+    if (!confirm('Wipe ALL progress and start over?')) return;
+    resetting = true;
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+  });
 }
 
 // One click of the cube — manual or automatic. Applies cube/shiny gains, returns what happened.
