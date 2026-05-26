@@ -1,5 +1,10 @@
 'use strict';
 
+// break_eternity.js exposes Decimal as a strict class. Wrap it so D(x) coerces
+// to a Decimal whether x is a number, string, or already a Decimal.
+function D(x) { return (x instanceof Decimal) ? x : new Decimal(x); }
+D.min = (a, b) => Decimal.min(a, b);
+
 /* =================== DATA =================== */
 const COLORS  = ['#f5f5f5', '#ffd500', '#d92b2b', '#ff7a1a', '#2b6fd9', '#28a745'];
 const CUBES   = ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7'];
@@ -54,7 +59,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:0, total:0, clickLevel:0, shinies:0, shinyBonus:0, shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:D(0), total:D(0), clickLevel:0, shinies:0, shinyBonus:D(0), shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -68,90 +73,102 @@ let autoRenderAt = 0;                                     // throttles the cube 
 /* =================== DERIVED VALUES =================== */
 const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * state.boosts[b.id], 0);
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
-const gearCost     = g  => Math.floor(g.baseCost * Math.pow(1.15, state.gear[g.id]));
+const gearCost     = g  => D(g.baseCost).mul(D(1.15).pow(state.gear[g.id])).floor();
 const prestigeMult = () => Math.pow(2, state.prestige);
-const perClick     = () => cap((1 + 2 * state.clickLevel + clickFlat() + gearFlat() + state.shinyBonus) * Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click) * prestigeMult());
-const clickCost    = () => Math.floor(15 * Math.pow(1.4, state.clickLevel));
-const buildingCost = b  => Math.floor(b.baseCost * Math.pow(1.15, state.buildings[b.id]));
-const boostCost    = b  => Math.floor(b.baseCost * Math.pow(b.growth, state.boosts[b.id]));
-const baseCps      = () => BUILDINGS.reduce((s, b) => s + b.cps * state.buildings[b.id], 0);
-const cps          = () => cap((baseCps() + state.boosts.flow + state.shinyBonus) * Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps) * prestigeMult());
+const perClick     = () => cap(
+  D(1).add(2 * state.clickLevel).add(clickFlat()).add(gearFlat()).add(state.shinyBonus)
+    .mul(Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click) * prestigeMult())
+);
+const clickCost    = () => D(15).mul(D(1.4).pow(state.clickLevel)).floor();
+const buildingCost = b  => D(b.baseCost).mul(D(1.15).pow(state.buildings[b.id])).floor();
+const boostCost    = b  => D(b.baseCost).mul(D(b.growth).pow(state.boosts[b.id])).floor();
+const baseCps      = () => BUILDINGS.reduce((s, b) => s.add(D(b.cps).mul(state.buildings[b.id])), D(0));
+const cps          = () => cap(
+  baseCps().add(state.boosts.flow).add(state.shinyBonus)
+    .mul(Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps) * prestigeMult())
+);
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
-const autoClickerCost = () => Math.floor(AC_BASE * Math.pow(1.6, state.autoClicker));
+const autoClickerCost = () => D(AC_BASE).mul(D(1.6).pow(state.autoClicker)).floor();
 
 /* =================== HELPERS =================== */
-const UNITS = (function() {
-  const base = ['', 'K', 'M', 'B', 'T'];
-  const ones = ['', 'U', 'D', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
-  const tens = ['', 'Dc', 'Vg', 'Tg', 'Qd', 'Qq', 'Sg', 'St', 'Og', 'Ng'];
-  for (let t = 0; t < 10; t++)
-    for (let o = 0; o < 10; o++) {
-      if (t * 10 + o < 4) continue;
-      base.push(ones[o] + tens[t]);
-    }
-  // Centillion tier (tiers 101..110): Ce, UCe, DCe, TCe, QaCe, QiCe, SxCe, SpCe, OcCe, NoCe.
-  // Reachable in practice only up to ~180 UCe — JS Number maxes at ≈ 1.8e308 < 10^309 (DCe).
-  for (let o = 0; o < 10; o++) base.push(ones[o] + 'Ce');
-  return base;
-})();
+// Conway-Wechsler-ish naming for the N-th -illion (short scale, N >= 1).
+const _ILL_SPECIAL_NAME = ['', 'million', 'billion', 'trillion', 'quadrillion', 'quintillion',
+                           'sextillion', 'septillion', 'octillion', 'nonillion'];
+const _ILL_SPECIAL_ABBR = ['', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+const _ILL_ONES_P = ['', 'un', 'duo', 'tre', 'quattuor', 'quin', 'sex', 'septen', 'octo', 'novem'];
+const _ILL_TENS_P = ['', 'deci', 'viginti', 'triginta', 'quadraginta', 'quinquaginta',
+                     'sexaginta', 'septuaginta', 'octoginta', 'nonaginta'];
+const _ILL_HUND_P = ['', 'centi', 'ducenti', 'trecenti', 'quadringenti', 'quingenti',
+                     'sescenti', 'septingenti', 'octingenti', 'nongenti'];
+const _ILL_ONES_A = ['', 'U', 'D', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+const _ILL_TENS_A = ['', 'Dc', 'Vg', 'Tg', 'Qd', 'Qq', 'Sg', 'St', 'Og', 'Ng'];
+const _ILL_HUND_A = ['', 'Ce', 'DuC', 'TrC', 'QaC', 'QiC', 'SxC', 'SpC', 'OcC', 'NoC'];
 
-// Full Latin-illion names, indexed in lock-step with UNITS, for hover tooltips.
-const NAMES = (function() {
-  const names = ['', 'thousand', 'million', 'billion', 'trillion'];
-  const onesPrefix = ['', 'un', 'duo', 'tre', 'quattuor', 'quin', 'sex', 'septen', 'octo', 'novem'];
-  const tensSuffix = ['', 'decillion', 'vigintillion', 'trigintillion', 'quadragintillion',
-                      'quinquagintillion', 'sexagintillion', 'septuagintillion',
-                      'octogintillion', 'nonagintillion'];
-  const onesOnly = ['', '', '', '', 'quadrillion', 'quintillion', 'sextillion',
-                    'septillion', 'octillion', 'nonillion'];
-  for (let t = 0; t < 10; t++)
-    for (let o = 0; o < 10; o++) {
-      if (t * 10 + o < 4) continue;
-      names.push(t === 0 ? onesOnly[o] : onesPrefix[o] + tensSuffix[t]);
-    }
-  for (let o = 0; o < 10; o++) names.push(onesPrefix[o] + 'centillion');
-  return names;
-})();
-
-function fmt(n) {
-  if (n === Infinity) return '∞';
-  if (!isFinite(n)) return '0';
-  if (n < 1000) {
-    n = Math.floor(n * 10) / 10;          // 1-decimal trim only for small values;
-    return (n % 1 === 0 ? String(n) : n.toFixed(1));  // for n near MAX_VALUE, n*10 overflows to Infinity.
-  }
-  let i = 0;
-  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++; }
-  if (i === UNITS.length - 1 && n >= 1000) {
-    const totalExp = Math.floor(Math.log10(n)) + i * 3;
-    const mantissa = n / Math.pow(10, Math.floor(Math.log10(n)));
-    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e' + totalExp;
-  }
-  return n.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
+function illionAbbr(n) {
+  if (n < 1) return '';
+  if (n < 10) return _ILL_SPECIAL_ABBR[n];
+  const u = n % 10, t = Math.floor(n / 10) % 10, h = Math.floor(n / 100) % 10;
+  return _ILL_ONES_A[u] + _ILL_TENS_A[t] + _ILL_HUND_A[h];
+}
+function illionName(n) {
+  if (n < 1) return '';
+  if (n < 10) return _ILL_SPECIAL_NAME[n];
+  const u = n % 10, t = Math.floor(n / 10) % 10, h = Math.floor(n / 100) % 10;
+  return (_ILL_ONES_P[u] + _ILL_TENS_P[t] + _ILL_HUND_P[h]).replace(/[ia]$/, '') + 'illion';
 }
 
-// HTML-flavoured fmt: wraps the suffix in a span carrying the full name as a tooltip.
+// UNITS[i] = abbreviation for 10^(3i); NAMES[i] = full name. Indices 0..201 (up to ducentillion).
+const UNITS = [];
+const NAMES = [];
+for (let i = 0; i <= 201; i++) {
+  if (i === 0)      { UNITS.push('');  NAMES.push(''); }
+  else if (i === 1) { UNITS.push('K'); NAMES.push('thousand'); }
+  else              { UNITS.push(illionAbbr(i - 1)); NAMES.push(illionName(i - 1)); }
+}
+
+// fmt accepts either a Decimal or a plain Number. Returns a plain string (no HTML).
+function fmt(n) {
+  if (n == null) return '0';
+  const d = D(n);
+  if (!d.isFinite()) return '0';
+  if (d.lt(1000)) {
+    const x = Math.floor(d.toNumber() * 10) / 10;
+    return (x % 1 === 0 ? String(x) : x.toFixed(1));
+  }
+  const expFloor = d.log10().floor().toNumber();
+  let i = Math.floor(expFloor / 3);
+  if (i >= UNITS.length) i = UNITS.length - 1;
+  const mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  if (i === UNITS.length - 1 && mantissa >= 1000) {
+    return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
+  }
+  return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
+}
+
+// HTML version: wraps the suffix in a span carrying the full name as a tooltip.
 function fmtHTML(n) {
-  if (n === Infinity) return '∞';
-  if (!isFinite(n)) return '0';
-  if (n < 1000) {
-    n = Math.floor(n * 10) / 10;
-    return (n % 1 === 0 ? String(n) : n.toFixed(1));
+  if (n == null) return '0';
+  const d = D(n);
+  if (!d.isFinite()) return '0';
+  if (d.lt(1000)) {
+    const x = Math.floor(d.toNumber() * 10) / 10;
+    return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
-  let i = 0;
-  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++; }
-  if (i === UNITS.length - 1 && n >= 1000) {
-    const totalExp = Math.floor(Math.log10(n)) + i * 3;
-    const mantissa = n / Math.pow(10, Math.floor(Math.log10(n)));
-    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e' + totalExp;
+  const expFloor = d.log10().floor().toNumber();
+  let i = Math.floor(expFloor / 3);
+  if (i >= UNITS.length) i = UNITS.length - 1;
+  const mantissa = d.div(D(10).pow(i * 3)).toNumber();
+  if (i === UNITS.length - 1 && mantissa >= 1000) {
+    return mantissa.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
   }
-  const num = n.toFixed(2).replace(/\.?0+$/, '');
+  const num  = mantissa.toFixed(2).replace(/\.?0+$/, '');
   const name = NAMES[i];
   return name ? `${num}<span class="num-suffix" title="${name}">${UNITS[i]}</span>` : num + UNITS[i];
 }
 
-const CAP      = Number.MAX_VALUE;  // ≈ 1.8e308 — covers everything up to UCe
-const cap      = n => Math.min(n, CAP);
+const CAP_TIER = 201;                          // ducentillion = 10^603 — soft display ceiling.
+const CAP      = D(10).pow(CAP_TIER * 3);
+const cap      = n => D.min(D(n), CAP);
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
 const polyStr  = pts => pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
 const add      = (p, q) => [p[0] + q[0], p[1] + q[1]];
@@ -469,22 +486,20 @@ function toggleCard(card, costEl, affordable) {
 }
 
 function maxAfford(baseCost, ratio, owned) {
-  if (ratio <= 1) return state.cubes >= baseCost ? 9999 : 0;
-  // Use logarithms to estimate max level, then verify
-  // Sum of geometric series: baseCost * (ratio^owned + ... + ratio^(owned+n-1))
-  // = baseCost * ratio^owned * (ratio^n - 1) / (ratio - 1)
+  if (ratio <= 1) return state.cubes.gte(baseCost) ? 9999 : 0;
   let budget = state.cubes, count = 0, lvl = owned;
   while (count < 9999) {
-    const c = Math.floor(baseCost * Math.pow(ratio, lvl));
-    if (c <= 0 || budget < c) break;
-    budget -= c;
+    const c = D(baseCost).mul(D(ratio).pow(lvl)).floor();
+    if (c.lte(0) || budget.lt(c)) break;
+    budget = budget.sub(c);
     lvl++;
     count++;
   }
   return count;
 }
 function maxAffordFlat(cost) {
-  return Math.min(Math.floor(state.cubes / cost), 9999);
+  const n = state.cubes.div(cost).floor().toNumber();
+  return Math.min(isFinite(n) ? n : 9999, 9999);
 }
 
 function updateUI() {
@@ -500,7 +515,7 @@ function updateUI() {
   document.getElementById('shiny-lvl').textContent =
     'Level ' + state.shinyLevel + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
   toggleCard(document.getElementById('shiny-up'),
-             document.getElementById('su-cost'), state.cubes >= SHINY_UP_COST);
+             document.getElementById('su-cost'), state.cubes.gte(SHINY_UP_COST));
 
   const acC = autoClickerCost();
   const acMax = isMax ? maxAfford(AC_BASE, 1.6, state.autoClicker) : 0;
@@ -508,14 +523,14 @@ function updateUI() {
   document.getElementById('ac-owned').textContent = state.autoClicker;
   document.getElementById('ac-rate').textContent  = state.autoClicker;
   toggleCard(document.getElementById('auto-clicker'),
-             document.getElementById('ac-cost'), state.cubes >= acC);
+             document.getElementById('ac-cost'), state.cubes.gte(acC));
 
   const cc = clickCost();
   const ccMax = isMax ? maxAfford(15, 1.4, state.clickLevel) : 0;
   document.getElementById('cu-cost').innerHTML    = isMax ? fmtHTML(cc) + ' (×' + fmtHTML(ccMax) + ')' : fmtHTML(cc);
   document.getElementById('cu-owned').textContent = 'Level ' + state.clickLevel;
   toggleCard(document.getElementById('click-upgrade'),
-             document.getElementById('cu-cost'), state.cubes >= cc);
+             document.getElementById('cu-cost'), state.cubes.gte(cc));
 
   BOOSTS.forEach(b => {
     const c = boostCost(b);
@@ -523,7 +538,7 @@ function updateUI() {
     document.getElementById('bcost-' + b.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(bMax) + ')' : fmtHTML(c);
     document.getElementById('bought-' + b.id).textContent = state.boosts[b.id];
     toggleCard(document.getElementById('boost-' + b.id),
-               document.getElementById('bcost-' + b.id), state.cubes >= c);
+               document.getElementById('bcost-' + b.id), state.cubes.gte(c));
   });
 
   GEAR.forEach(g => {
@@ -532,7 +547,7 @@ function updateUI() {
     document.getElementById('gcost-' + g.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(gMax) + ')' : fmtHTML(c);
     document.getElementById('gowned-' + g.id).textContent = state.gear[g.id];
     toggleCard(document.getElementById('gear-' + g.id),
-               document.getElementById('gcost-' + g.id), state.cubes >= c);
+               document.getElementById('gcost-' + g.id), state.cubes.gte(c));
   });
 
   BUILDINGS.forEach(b => {
@@ -541,24 +556,27 @@ function updateUI() {
     document.getElementById('cost-' + b.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(bMax) + ')' : fmtHTML(c);
     document.getElementById('owned-' + b.id).textContent = state.buildings[b.id];
     toggleCard(document.getElementById('b-' + b.id),
-               document.getElementById('cost-' + b.id), state.cubes >= c);
+               document.getElementById('cost-' + b.id), state.cubes.gte(c));
   });
 
   const pBox = document.getElementById('prestige-box');
   const pCount = document.getElementById('prestige-count');
   const wBtn = document.getElementById('win-btn');
-  pBox.style.display = (state.cubes >= 1e300 || state.prestige > 0) ? '' : 'none';
-  document.getElementById('prestige-btn').disabled = state.cubes < 1e300;
+  const prestigeReady = state.cubes.gte('1e300');
+  pBox.style.display = (prestigeReady || state.prestige > 0) ? '' : 'none';
+  document.getElementById('prestige-btn').disabled = !prestigeReady;
   pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10';
   wBtn.style.display = state.prestige >= 10 ? '' : 'none';
 }
 
 /* =================== ACTIONS =================== */
 function bulkBuy(costFn, applyFn) {
-  const limit = buyMode === 'max' ? Infinity : buyMode;
+  const limit = buyMode === 'max' ? 9999 : buyMode;
   let bought = 0;
-  while (bought < limit && state.cubes >= costFn()) {
-    state.cubes -= costFn();
+  while (bought < limit) {
+    const c = costFn();
+    if (state.cubes.lt(c)) break;
+    state.cubes = state.cubes.sub(c);
     applyFn();
     bought++;
   }
@@ -606,14 +624,14 @@ function setBuyMode(amt) {
 }
 
 function doPrestige() {
-  if (state.cubes < 1e300) return;
+  if (state.cubes.lt('1e300')) return;
   if (!confirm('Prestige? You\'ll reset all cubes, upgrades, and buildings — but gain a prestige star!')) return;
   state.prestige++;
-  state.cubes = 0;
-  state.total = 0;
+  state.cubes = D(0);
+  state.total = D(0);
   state.clickLevel = 0;
   state.shinies = 0;
-  state.shinyBonus = 0;
+  state.shinyBonus = D(0);
   state.shinyLevel = 0;
   state.autoClicker = 0;
   state.autoRate = 0;
@@ -645,14 +663,14 @@ function clickGain() {
 
   if (shiny) {
     const reward = SHINY[type];
-    gain += reward;
+    gain = gain.add(reward);
     state.shinies++;
-    state.shinyBonus = cap(state.shinyBonus + reward);
+    state.shinyBonus = cap(state.shinyBonus.add(reward));
     toast(`✨ SHINY ${prettyName(type)}!  +${fmt(reward)} cubes — and +${fmt(reward)}/click & /sec forever! ✨`, 'shiny');
   }
 
-  state.cubes = cap(state.cubes + gain);
-  state.total = cap(state.total + gain);
+  state.cubes = cap(state.cubes.add(gain));
+  state.total = cap(state.total.add(gain));
   return { type, shiny, gain };
 }
 function handleClick(e) {
@@ -691,10 +709,10 @@ function toast(msg, cls) {
 
 /* =================== TICK & SAVE =================== */
 function tick() {
-  const gain = cps() / 10;        // runs 10× per second
-  if (!isFinite(gain)) return;
-  state.cubes = cap(state.cubes + gain);
-  state.total = cap(state.total + gain);
+  const gain = cps().div(10);     // runs 10× per second
+  if (!gain.isFinite()) return;
+  state.cubes = cap(state.cubes.add(gain));
+  state.total = cap(state.total.add(gain));
 
   autoAcc += state.autoRate / 10;           // auto-clicker performs real clicks (rate set by slider)
   let last = null, shinyHit = null;
@@ -718,7 +736,13 @@ function tick() {
 function save() {
   if (resetting) return;
   state.lastSeen = Date.now();
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  // Decimals serialize as strings so big values survive a JSON round-trip.
+  const data = Object.assign({}, state, {
+    cubes:      state.cubes.toString(),
+    total:      state.total.toString(),
+    shinyBonus: state.shinyBonus.toString(),
+  });
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   document.getElementById('save-status').textContent = 'saved ✓';
 }
 function load() {
@@ -726,11 +750,16 @@ function load() {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!d) return;
     const num = v => (typeof v === 'number' && isFinite(v)) ? v : 0;
-    state.cubes      = num(d.cubes);
-    state.total      = num(d.total);
+    const dec = v => {
+      if (v == null) return D(0);
+      try { const r = D(v); return r.isFinite() ? r : D(0); }
+      catch (_) { return D(0); }
+    };
+    state.cubes      = dec(d.cubes);
+    state.total      = dec(d.total);
+    state.shinyBonus = dec(d.shinyBonus);
     state.clickLevel = num(d.clickLevel);
     state.shinies    = num(d.shinies);
-    state.shinyBonus = num(d.shinyBonus);
     state.shinyLevel = num(d.shinyLevel);
     state.autoClicker = num(d.autoClicker);
     state.autoRate   = d.autoRate !== undefined ? num(d.autoRate) : num(d.autoClicker);
@@ -746,10 +775,10 @@ function load() {
 }
 function offlineEarnings() {
   const dt = Math.min((Date.now() - state.lastSeen) / 1000, 7200);  // cap 2h
-  if (dt > 5 && cps() > 0) {
-    const earned = cap(cps() * dt);
-    state.cubes = cap(state.cubes + earned);
-    state.total = cap(state.total + earned);
+  if (dt > 5 && cps().gt(0)) {
+    const earned = cap(cps().mul(dt));
+    state.cubes = cap(state.cubes.add(earned));
+    state.total = cap(state.total.add(earned));
     toast(`Welcome back! Your solvers earned ${fmt(earned)} cubes while you were away.`);
   }
 }
@@ -773,9 +802,9 @@ function init() {
   document.getElementById('secret-emoji').addEventListener('click', () => {
     const bonus = 1e24;
     const rateBonus = 2.5e23;
-    state.cubes = cap(state.cubes + bonus);
-    state.total = cap(state.total + bonus);
-    state.shinyBonus = cap(state.shinyBonus + rateBonus);
+    state.cubes = cap(state.cubes.add(bonus));
+    state.total = cap(state.total.add(bonus));
+    state.shinyBonus = cap(state.shinyBonus.add(rateBonus));
     toast('🧩 You found a secret! +1Sp cubes & +250Sx/click & /sec forever!');
     updateUI();
     save();
