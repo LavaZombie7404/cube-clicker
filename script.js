@@ -523,8 +523,9 @@ function toggleCard(card, costEl, affordable) {
 
 // Closed-form for exponential cost series. Total cost of N levels starting at
 // `owned` is firstCost * (r^N - 1) / (r - 1), so the max N affordable is
-// floor(log_r(1 + budget * (r-1) / firstCost)). Hard-capped at 1e9 for sanity.
-const HARD_BUY_CAP = 1e9;
+// floor(log_r(1 + budget * (r-1) / firstCost)). Cap at Number.MAX_SAFE_INTEGER
+// so the level counter (a plain Number) never loses integer precision.
+const HARD_BUY_CAP = Number.MAX_SAFE_INTEGER;
 function maxAfford(baseCost, ratio, owned) {
   if (ratio === 1) {
     const flat = state.cubes.div(baseCost).floor().toNumber();
