@@ -731,22 +731,32 @@ function setCustomBuyMode() {
   updateUI();
 }
 
-// Prestige reward tiers: cubes threshold → stars gained. Highest match wins.
-const PRESTIGE_TIERS = [
-  { threshold: '1e1000000000000000', stars: 13, label: '1e1Qa'  },
-  { threshold: '1e100000000000000',  stars: 12, label: '1e100T' },
-  { threshold: '1e10000000000000',   stars: 11, label: '1e10T'  },
-  { threshold: '1e1000000000000',    stars: 10, label: '1e1T'   },
-  { threshold: '1e100000000000',     stars:  9, label: '1e100B' },
-  { threshold: '1e10000000000',      stars:  8, label: '1e10B'  },
-  { threshold: '1e1000000000',       stars:  7, label: '1e1B'   },
-  { threshold: '1e100000000',        stars:  6, label: '1e100M' },
-  { threshold: '1e10000000',         stars:  5, label: '1e10M'  },
-  { threshold: '1e1000000',          stars:  4, label: '1e1M'   },
-  { threshold: '1e100000',           stars:  3, label: '1e100K' },
-  { threshold: '1e10000',            stars:  2, label: '1e10K'  },
-  { threshold: '1e300',              stars:  1, label: '1e300'  },
-];
+// Prestige reward tiers built from a generator: each ×10 in cube count adds
+// one star, on the "1eX[K/M/B/T/Qa/Qi/Sx/Sp/Oc/No/Dc/UDc]" rhythm.
+// Top of the ladder is 1e100UDc → +36 stars. Highest match wins.
+const PRESTIGE_TIERS = (function() {
+  const SUFFIXES = [
+    { name: 'K',   exp:  3 }, { name: 'M',   exp:  6 }, { name: 'B',   exp:  9 },
+    { name: 'T',   exp: 12 }, { name: 'Qa',  exp: 15 }, { name: 'Qi',  exp: 18 },
+    { name: 'Sx',  exp: 21 }, { name: 'Sp',  exp: 24 }, { name: 'Oc',  exp: 27 },
+    { name: 'No',  exp: 30 }, { name: 'Dc',  exp: 33 }, { name: 'UDc', exp: 36 },
+  ];
+  const tiers = [];
+  for (const s of SUFFIXES) {
+    for (const m of [1, 10, 100]) {
+      const exp = s.exp + (m === 1 ? 0 : m === 10 ? 1 : 2);
+      if (exp < 4) continue;            // skip 1e1K (=1e1000), too close to 1e300
+      tiers.push({
+        threshold: '1e1' + '0'.repeat(exp),
+        stars: exp - 2,
+        label: '1e' + m + s.name,
+      });
+    }
+  }
+  tiers.reverse();                      // highest threshold first
+  tiers.push({ threshold: '1e300', stars: 1, label: '1e300' });
+  return tiers;
+})();
 function doPrestige() {
   if (state.cubes.lt('1e300')) return;
   const tier = PRESTIGE_TIERS.find(t => state.cubes.gte(t.threshold));
