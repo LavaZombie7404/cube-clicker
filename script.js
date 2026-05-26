@@ -45,6 +45,7 @@ const BOOSTS = [
   { id:'x5cps',    name:'Penta Auto Income', desc:'×5 the cubes your solvers make.',   baseCost:75000, growth:15 },
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
   { id:'x10all',   name:'Decuple Everything', desc:'×10 cubes from clicks AND auto income.', baseCost:1e9, growth:100 },
+  { id:'x20all',   name:'Vigecuple Everything', desc:'×20 cubes from clicks AND auto income.', baseCost:1e15, growth:400 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -82,6 +83,7 @@ const perClick     = () => cap(
     .mul(D(2).pow(state.boosts.dblclick))
     .mul(D(5).pow(state.boosts.x5click))
     .mul(D(10).pow(state.boosts.x10all))
+    .mul(D(20).pow(state.boosts.x20all))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -94,6 +96,7 @@ const cps          = () => cap(
     .mul(D(2).pow(state.boosts.dblcps))
     .mul(D(5).pow(state.boosts.x5cps))
     .mul(D(10).pow(state.boosts.x10all))
+    .mul(D(20).pow(state.boosts.x20all))
     .mul(prestigeMult())
     .mul(winMult())
 );
