@@ -44,6 +44,7 @@ const BOOSTS = [
   { id:'x5click',  name:'Penta Click Power', desc:'×5 the cubes you earn per click.',  baseCost:50000, growth:12 },
   { id:'x5cps',    name:'Penta Auto Income', desc:'×5 the cubes your solvers make.',   baseCost:75000, growth:15 },
   { id:'flow',     name:'Steady Flow',        desc:'+1 cube per second, no clicking.',  baseCost:200,  growth:4 },
+  { id:'x10all',   name:'Decuple Everything', desc:'×10 cubes from clicks AND auto income.', baseCost:1e9, growth:100 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -77,7 +78,10 @@ const gearCost     = g  => D(g.baseCost).mul(D(1.15).pow(state.gear[g.id])).floo
 const prestigeMult = () => Math.pow(2, state.prestige);
 const perClick     = () => cap(
   D(1).add(2 * state.clickLevel).add(clickFlat()).add(gearFlat()).add(state.shinyBonus)
-    .mul(Math.pow(2, state.boosts.dblclick) * Math.pow(5, state.boosts.x5click) * prestigeMult())
+    .mul(D(2).pow(state.boosts.dblclick))
+    .mul(D(5).pow(state.boosts.x5click))
+    .mul(D(10).pow(state.boosts.x10all))
+    .mul(prestigeMult())
 );
 const clickCost    = () => D(15).mul(D(1.4).pow(state.clickLevel)).floor();
 const buildingCost = b  => D(b.baseCost).mul(D(1.15).pow(state.buildings[b.id])).floor();
@@ -85,7 +89,10 @@ const boostCost    = b  => D(b.baseCost).mul(D(b.growth).pow(state.boosts[b.id])
 const baseCps      = () => BUILDINGS.reduce((s, b) => s.add(D(b.cps).mul(state.buildings[b.id])), D(0));
 const cps          = () => cap(
   baseCps().add(state.boosts.flow).add(state.shinyBonus)
-    .mul(Math.pow(2, state.boosts.dblcps) * Math.pow(5, state.boosts.x5cps) * prestigeMult())
+    .mul(D(2).pow(state.boosts.dblcps))
+    .mul(D(5).pow(state.boosts.x5cps))
+    .mul(D(10).pow(state.boosts.x10all))
+    .mul(prestigeMult())
 );
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => D(AC_BASE).mul(D(1.6).pow(state.autoClicker)).floor();
