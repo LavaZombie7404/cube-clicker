@@ -60,7 +60,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:D(0), total:D(0), clickLevel:0, shinies:0, shinyBonus:D(0), shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:D(0), total:D(0), clickLevel:0, shinies:0, shinyBonus:D(0), shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, wins:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -76,12 +76,14 @@ const clickFlat    = () => BOOSTS.reduce((s, b) => s + (b.clickFlat || 0) * stat
 const gearFlat     = () => GEAR.reduce((s, g) => s + g.perClick * state.gear[g.id], 0);
 const gearCost     = g  => D(g.baseCost).mul(D(1.15).pow(state.gear[g.id])).floor();
 const prestigeMult = () => Math.pow(2, state.prestige);
+const winMult      = () => D(100).pow(state.wins);   // each Restart-from-win adds a permanent ×100.
 const perClick     = () => cap(
   D(1).add(2 * state.clickLevel).add(clickFlat()).add(gearFlat()).add(state.shinyBonus)
     .mul(D(2).pow(state.boosts.dblclick))
     .mul(D(5).pow(state.boosts.x5click))
     .mul(D(10).pow(state.boosts.x10all))
     .mul(prestigeMult())
+    .mul(winMult())
 );
 const clickCost    = () => D(15).mul(D(1.4).pow(state.clickLevel)).floor();
 const buildingCost = b  => D(b.baseCost).mul(D(1.15).pow(state.buildings[b.id])).floor();
@@ -93,6 +95,7 @@ const cps          = () => cap(
     .mul(D(5).pow(state.boosts.x5cps))
     .mul(D(10).pow(state.boosts.x10all))
     .mul(prestigeMult())
+    .mul(winMult())
 );
 const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
 const autoClickerCost = () => D(AC_BASE).mul(D(1.6).pow(state.autoClicker)).floor();
@@ -585,7 +588,8 @@ function updateUI() {
   const prestigeReady = state.cubes.gte('1e300');
   pBox.style.display = (prestigeReady || state.prestige > 0) ? '' : 'none';
   document.getElementById('prestige-btn').disabled = !prestigeReady;
-  pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10';
+  pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10'
+    + (state.wins > 0 ? '   🏆 Wins: ' + state.wins + ' (×' + fmt(winMult()) + ')' : '');
   wBtn.style.display = state.prestige >= 10 ? '' : 'none';
 }
 
@@ -682,25 +686,47 @@ function doPrestige() {
 
 function winGame() {
   if (state.prestige < 10) return;
+  const nextMult = D(100).pow(state.wins + 1);
   const overlay = document.createElement('div');
   overlay.id = 'win-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(14,14,22,.96);color:#ececf2;text-align:center;padding:20px;z-index:9999;';
   overlay.innerHTML =
       '<h1 style="font-size:3rem;margin-bottom:16px;">🏆 You Win! 🏆</h1>'
     + '<p style="font-size:1.3rem;color:#9a9ab0;">You prestiged ' + state.prestige + ' times and conquered Cube Clicker!</p>'
-    + '<p style="font-size:1rem;color:#7c5cff;margin:12px 0 24px;">Thanks for playing!</p>'
+    + '<p style="font-size:1rem;color:#7c5cff;margin:12px 0 24px;">Restart for a permanent ×100 to everything (total ×' + fmt(nextMult) + ').</p>'
     + '<div style="display:flex;gap:14px;">'
     +   '<button id="win-continue" class="win-btn" style="margin:0;">Continue playing</button>'
-    +   '<button id="win-restart"  class="win-btn" style="margin:0;background:linear-gradient(135deg,#d92b2b,#ff7a1a);">Restart from scratch</button>'
+    +   '<button id="win-restart"  class="win-btn" style="margin:0;background:linear-gradient(135deg,#d92b2b,#ff7a1a);">Restart (×100 bonus)</button>'
     + '</div>';
   document.body.appendChild(overlay);
   document.getElementById('win-continue').addEventListener('click', () => overlay.remove());
   document.getElementById('win-restart').addEventListener('click', () => {
-    if (!confirm('Wipe ALL progress and start over?')) return;
-    resetting = true;
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
+    if (!confirm('Restart? You\'ll lose all progress but gain a permanent ×100 multiplier (stacking with previous wins).')) return;
+    restartFromWin();
+    overlay.remove();
   });
+}
+
+function restartFromWin() {
+  state.wins++;
+  state.prestige = 0;
+  state.cubes = D(0);
+  state.total = D(0);
+  state.clickLevel = 0;
+  state.shinies = 0;
+  state.shinyBonus = D(0);
+  state.shinyLevel = 0;
+  state.autoClicker = 0;
+  state.autoRate = 0;
+  BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+  BOOSTS.forEach(b => state.boosts[b.id] = 0);
+  GEAR.forEach(g => state.gear[g.id] = 0);
+  autoAcc = 0;
+  refreshAutoRate();
+  renderPuzzle('3x3');
+  toast('🏆 Win #' + state.wins + '! Permanent ×' + fmt(winMult()) + ' to clicks and auto income.');
+  updateUI();
+  save();
 }
 
 // One click of the cube — manual or automatic. Applies cube/shiny gains, returns what happened.
@@ -812,6 +838,7 @@ function load() {
     state.autoClicker = num(d.autoClicker);
     state.autoRate   = d.autoRate !== undefined ? num(d.autoRate) : num(d.autoClicker);
     state.prestige   = num(d.prestige);
+    state.wins       = num(d.wins);
     state.lastSeen   = num(d.lastSeen) || Date.now();
     BUILDINGS.forEach(b =>
       state.buildings[b.id] = num(d.buildings && d.buildings[b.id]));
