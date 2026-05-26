@@ -89,8 +89,9 @@ const UNITS = (function() {
       if (t * 10 + o < 4) continue;
       base.push(ones[o] + tens[t]);
     }
-  base.push('Ce');   // centillion   = 10^303
-  base.push('UCe');  // uncentillion = 10^306 (max usable: JS Number max ≈ 1.8e308)
+  // Centillion tier (tiers 101..110): Ce, UCe, DCe, TCe, QaCe, QiCe, SxCe, SpCe, OcCe, NoCe.
+  // Reachable in practice only up to ~180 UCe — JS Number maxes at ≈ 1.8e308 < 10^309 (DCe).
+  for (let o = 0; o < 10; o++) base.push(ones[o] + 'Ce');
   return base;
 })();
 
@@ -108,8 +109,7 @@ const NAMES = (function() {
       if (t * 10 + o < 4) continue;
       names.push(t === 0 ? onesOnly[o] : onesPrefix[o] + tensSuffix[t]);
     }
-  names.push('centillion');
-  names.push('uncentillion');
+  for (let o = 0; o < 10; o++) names.push(onesPrefix[o] + 'centillion');
   return names;
 })();
 
