@@ -50,7 +50,8 @@ const BOOSTS = [
   { id:'x100all',  name:'Centuple Everything',      desc:'×100 cubes from clicks AND auto income.',  baseCost:1e40, growth:10000  },
   { id:'x200all',  name:'Ducentuple Everything',    desc:'×200 cubes from clicks AND auto income.',  baseCost:1e60, growth:50000  },
   { id:'x500all',  name:'Quingentuple Everything',  desc:'×500 cubes from clicks AND auto income.',  baseCost:1e90, growth:250000 },
-  { id:'x5000all', name:'Quinmillicuple Everything', desc:'×5000 cubes from clicks AND auto income. Unlocked at 50 prestiges.', baseCost:1e200, growth:5e7, unlockAt:50 },
+  { id:'x5000all',  name:'Quinmillicuple Everything',  desc:'×5000 cubes from clicks AND auto income. Unlocked at 50 prestiges.',     baseCost:1e200, growth:5e7, unlockAt:50  },
+  { id:'x10000all', name:'Decamillicuple Everything',  desc:'×10,000 cubes from clicks AND auto income. Unlocked at 100 prestiges.', baseCost:1e500, growth:5e9, unlockAt:100 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -94,6 +95,7 @@ const perClick     = () => cap(
     .mul(D(200).pow(state.boosts.x200all))
     .mul(D(500).pow(state.boosts.x500all))
     .mul(D(5000).pow(state.boosts.x5000all))
+    .mul(D(10000).pow(state.boosts.x10000all))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -112,6 +114,7 @@ const cps          = () => cap(
     .mul(D(200).pow(state.boosts.x200all))
     .mul(D(500).pow(state.boosts.x500all))
     .mul(D(5000).pow(state.boosts.x5000all))
+    .mul(D(10000).pow(state.boosts.x10000all))
     .mul(prestigeMult())
     .mul(winMult())
 );
