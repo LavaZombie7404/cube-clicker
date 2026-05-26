@@ -159,6 +159,12 @@ function _bigFallback(d) {
   return d.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
 }
 
+// Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
+const _COMMA_MAX = 1e6;
+function _comma(d) {
+  return d.toNumber().toLocaleString('en-US', { maximumFractionDigits: 1 });
+}
+
 // fmt accepts either a Decimal or a plain Number. Returns a plain string (no HTML).
 function fmt(n) {
   if (n == null) return '0';
@@ -169,6 +175,7 @@ function fmt(n) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
+  if (d.lt(_COMMA_MAX)) return _comma(d);
   const { i, mantissa } = _tier(d);
   return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
@@ -183,6 +190,7 @@ function fmtHTML(n) {
     const x = Math.floor(d.toNumber() * 10) / 10;
     return (x % 1 === 0 ? String(x) : x.toFixed(1));
   }
+  if (d.lt(_COMMA_MAX)) return _comma(d);
   const { i, mantissa } = _tier(d);
   const num  = mantissa.toFixed(2).replace(/\.?0+$/, '');
   const name = NAMES[i];
