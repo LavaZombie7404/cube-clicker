@@ -508,21 +508,26 @@ function toggleCard(card, costEl, affordable) {
   costEl.classList.toggle('no', !affordable);
 }
 
+// Closed-form for exponential cost series. Total cost of N levels starting at
+// `owned` is firstCost * (r^N - 1) / (r - 1), so the max N affordable is
+// floor(log_r(1 + budget * (r-1) / firstCost)). Hard-capped at 1e9 for sanity.
+const HARD_BUY_CAP = 1e9;
 function maxAfford(baseCost, ratio, owned) {
-  if (ratio <= 1) return state.cubes.gte(baseCost) ? 9999 : 0;
-  let budget = state.cubes, count = 0, lvl = owned;
-  while (count < 9999) {
-    const c = D(baseCost).mul(D(ratio).pow(lvl)).floor();
-    if (c.lte(0) || budget.lt(c)) break;
-    budget = budget.sub(c);
-    lvl++;
-    count++;
+  if (ratio === 1) {
+    const flat = state.cubes.div(baseCost).floor().toNumber();
+    return Math.min(isFinite(flat) ? Math.max(0, flat) : HARD_BUY_CAP, HARD_BUY_CAP);
   }
-  return count;
+  const r = D(ratio);
+  const firstCost = D(baseCost).mul(r.pow(owned));
+  if (state.cubes.lt(firstCost)) return 0;
+  const inner = state.cubes.mul(r.sub(1)).div(firstCost).add(1);
+  const n = inner.log10().div(r.log10()).floor().toNumber();
+  if (!isFinite(n) || n < 0) return 0;
+  return Math.min(n, HARD_BUY_CAP);
 }
 function maxAffordFlat(cost) {
   const n = state.cubes.div(cost).floor().toNumber();
-  return Math.min(isFinite(n) ? n : 9999, 9999);
+  return Math.min(isFinite(n) ? Math.max(0, n) : HARD_BUY_CAP, HARD_BUY_CAP);
 }
 
 function updateUI() {
@@ -594,27 +599,48 @@ function updateUI() {
 }
 
 /* =================== ACTIONS =================== */
-function bulkBuy(costFn, applyFn) {
-  const limit = buyMode === 'max' ? 9999 : buyMode;
-  let bought = 0;
-  while (bought < limit) {
-    const c = costFn();
-    if (state.cubes.lt(c)) break;
-    state.cubes = state.cubes.sub(c);
-    applyFn();
-    bought++;
-  }
-  if (bought) { updateUI(); save(); }
+// How many levels does the player want, given the current buyMode?
+// 'max' → Infinity; numeric (including the custom value) → that number.
+const desiredCount = () => buyMode === 'max' ? Infinity
+                       : (typeof buyMode === 'number' && buyMode > 0 ? buyMode : 1);
+
+// Exponential cost: applies `count` levels in one shot using the geometric-
+// series total cost. Avoids looping at extreme MAX scales.
+function bulkBuyExp(baseCost, ratio, get, set) {
+  const affordable = maxAfford(baseCost, ratio, get());
+  const count = Math.min(desiredCount(), affordable);
+  if (count <= 0) return;
+  const r = D(ratio);
+  const firstCost = D(baseCost).mul(r.pow(get()));
+  const totalCost = ratio === 1
+    ? firstCost.mul(count)
+    : firstCost.mul(r.pow(count).sub(1)).div(r.sub(1)).ceil();
+  state.cubes = state.cubes.sub(totalCost);
+  set(get() + count);
+  updateUI();
+  save();
 }
+
+// Flat cost: budget / cost, applied as one batched subtract + level set.
+function bulkBuyFlat(cost, get, set) {
+  const affordable = maxAffordFlat(cost);
+  const count = Math.min(desiredCount(), affordable);
+  if (count <= 0) return;
+  state.cubes = state.cubes.sub(D(cost).mul(count));
+  set(get() + count);
+  updateUI();
+  save();
+}
+
 function buyClick() {
-  bulkBuy(clickCost, () => state.clickLevel++);
+  bulkBuyExp(15, 1.4, () => state.clickLevel, n => { state.clickLevel = n; });
 }
 function buyShinyUp() {
-  bulkBuy(() => SHINY_UP_COST, () => state.shinyLevel++);
+  bulkBuyFlat(SHINY_UP_COST, () => state.shinyLevel, n => { state.shinyLevel = n; });
 }
 function buyAutoClicker() {
   const before = state.autoClicker;
-  bulkBuy(autoClickerCost, () => state.autoClicker++);
+  bulkBuyExp(AC_BASE, 1.6, () => state.autoClicker, n => { state.autoClicker = n; });
   if (state.autoClicker > before) state.autoRate = state.autoClicker;  // run new clickers by default
   refreshAutoRate();
 }
@@ -630,20 +656,32 @@ function refreshAutoRate() {
 }
 function buyBuilding(id) {
   const b = BUILDINGS.find(x => x.id === id);
-  bulkBuy(() => buildingCost(b), () => state.buildings[id]++);
+  bulkBuyExp(b.baseCost, 1.15, () => state.buildings[id], n => { state.buildings[id] = n; });
 }
 function buyGear(id) {
   const g = GEAR.find(x => x.id === id);
-  bulkBuy(() => gearCost(g), () => state.gear[id]++);
+  bulkBuyExp(g.baseCost, 1.15, () => state.gear[id], n => { state.gear[id] = n; });
 }
 function buyBoost(id) {
   const b = BOOSTS.find(x => x.id === id);
-  bulkBuy(() => boostCost(b), () => state.boosts[id]++);
+  bulkBuyExp(b.baseCost, b.growth, () => state.boosts[id], n => { state.boosts[id] = n; });
 }
 function setBuyMode(amt) {
   buyMode = amt;
   document.querySelectorAll('#buy-modes button').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.amt === String(amt)));
+  updateUI();
+}
+function setCustomBuyMode() {
+  const seed = (typeof buyMode === 'number' && buyMode >= 100) ? String(buyMode) : '100';
+  const input = prompt('How many levels per buy?', seed);
+  if (input === null) return;
+  const n = Math.max(1, Math.floor(Number(input)));
+  if (!isFinite(n) || n <= 0) return;
+  buyMode = n;
+  const customBtn = document.querySelector('#buy-modes button[data-amt="custom"]');
+  customBtn.textContent = '×' + n;
+  document.querySelectorAll('#buy-modes button').forEach(btn => btn.classList.toggle('active', btn === customBtn));
   updateUI();
 }
 
@@ -885,8 +923,11 @@ function init() {
     save();
   });
   document.querySelectorAll('#buy-modes button').forEach(btn =>
-    btn.addEventListener('click', () =>
-      setBuyMode(btn.dataset.amt === 'max' ? 'max' : parseInt(btn.dataset.amt, 10))));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.amt === 'custom')   setCustomBuyMode();
+      else if (btn.dataset.amt === 'max') setBuyMode('max');
+      else                                setBuyMode(parseInt(btn.dataset.amt, 10));
+    }));
   const arSlider = document.getElementById('auto-rate');
   arSlider.addEventListener('input', () => {
     state.autoRate = parseInt(arSlider.value, 10) || 0;
