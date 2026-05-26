@@ -168,25 +168,31 @@ function _tier(d) {
   return { i, mantissa };
 }
 
+// Brackets cycle as nesting deepens: outermost [...], then (...), then {...},
+// then back to [...]. So 10^(10^(10^100)) reads as 1e+[1e+(1e+100)].
+const _NEST_BRACKETS = [['[', ']'], ['(', ')'], ['{', '}']];
+
 // Format a Decimal-typed exponent. Plain digits when small, K/M/T/Qa/… suffix
-// when it fits the table, recursive parenthesised fallback for tower-range.
-function _fmtExpD(d) {
+// when it fits the table, recursive bracketed nest for tower-range.
+function _fmtExpD(d, depth) {
   if (d.lt(1000)) return d.floor().toNumber().toString();
-  if (d.gte(SCI_THRESHOLD)) return '(' + _bigFallback(d) + ')';
+  if (d.gte(SCI_THRESHOLD)) {
+    const [open, close] = _NEST_BRACKETS[depth % _NEST_BRACKETS.length];
+    return open + _bigFallback(d, depth + 1) + close;
+  }
   const { i, mantissa } = _tier(d);
   return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i].toLowerCase();
 }
 
-// For values past the suffix table, decompose d = M × 10^E directly via
-// log10 instead of parsing toExponential's string. This handles tower-form
-// values (e.g. ee17.2 = 10^(10^17.2)) by formatting their log10 with K/M/T/…
-// suffixes — so ee17.2 reads as 1e+158.5qa.
-function _bigFallback(d) {
+// For values past the suffix table, decompose d = M × 10^E via log10. Handles
+// tower-form Decimals (e.g. ee17.2) by recursing into the exponent until it
+// fits the suffix table.
+function _bigFallback(d, depth = 0) {
   const log = d.log10();
   const expFloor = log.floor();
   const mantissa = D(10).pow(log.sub(expFloor)).toNumber();
   const mantStr = isFinite(mantissa) ? mantissa.toFixed(2).replace(/\.?0+$/, '') : '1';
-  return mantStr + 'e+' + _fmtExpD(expFloor);
+  return mantStr + 'e+' + _fmtExpD(expFloor, depth);
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
