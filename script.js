@@ -179,12 +179,14 @@ function _fmtExp(n) {
 }
 
 // For values past the suffix table, emit Decimal's scientific form with the
-// exponent itself suffixed: 1e3450 → 1e+3.45k, 1e1234567 → 1e+1.23m.
-// break_eternity's toExponential may omit the "+" sign on positive exponents,
-// so the regex makes it optional and we re-add it for clarity.
+// exponent itself suffixed: 1e3450 → 1e+3.45k, 1e1234567 → 1e+1.23m. Anchored
+// match so tower-notation strings like "ee17.2" (= 10^10^17.2) pass through
+// untouched instead of getting their inner "e17" mangled.
 function _bigFallback(d) {
   const s = d.toExponential(2).replace(/\.?0+e/, 'e');
-  return s.replace(/e([+-]?)(\d+)/, (_, sign, exp) => 'e' + (sign === '-' ? '-' : '+') + _fmtExp(Number(exp)));
+  const m = s.match(/^(.+?)e([+-]?)(\d+)$/);
+  if (!m) return s;
+  return m[1] + 'e' + (m[2] === '-' ? '-' : '+') + _fmtExp(Number(m[3]));
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
