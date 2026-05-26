@@ -94,6 +94,25 @@ const UNITS = (function() {
   return base;
 })();
 
+// Full Latin-illion names, indexed in lock-step with UNITS, for hover tooltips.
+const NAMES = (function() {
+  const names = ['', 'thousand', 'million', 'billion', 'trillion'];
+  const onesPrefix = ['', 'un', 'duo', 'tre', 'quattuor', 'quin', 'sex', 'septen', 'octo', 'novem'];
+  const tensSuffix = ['', 'decillion', 'vigintillion', 'trigintillion', 'quadragintillion',
+                      'quinquagintillion', 'sexagintillion', 'septuagintillion',
+                      'octogintillion', 'nonagintillion'];
+  const onesOnly = ['', '', '', '', 'quadrillion', 'quintillion', 'sextillion',
+                    'septillion', 'octillion', 'nonillion'];
+  for (let t = 0; t < 10; t++)
+    for (let o = 0; o < 10; o++) {
+      if (t * 10 + o < 4) continue;
+      names.push(t === 0 ? onesOnly[o] : onesPrefix[o] + tensSuffix[t]);
+    }
+  names.push('centillion');
+  names.push('uncentillion');
+  return names;
+})();
+
 function fmt(n) {
   if (n === Infinity) return '∞';
   if (!isFinite(n)) return '0';
@@ -110,6 +129,27 @@ function fmt(n) {
   }
   return n.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
 }
+
+// HTML-flavoured fmt: wraps the suffix in a span carrying the full name as a tooltip.
+function fmtHTML(n) {
+  if (n === Infinity) return '∞';
+  if (!isFinite(n)) return '0';
+  if (n < 1000) {
+    n = Math.floor(n * 10) / 10;
+    return (n % 1 === 0 ? String(n) : n.toFixed(1));
+  }
+  let i = 0;
+  while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++; }
+  if (i === UNITS.length - 1 && n >= 1000) {
+    const totalExp = Math.floor(Math.log10(n)) + i * 3;
+    const mantissa = n / Math.pow(10, Math.floor(Math.log10(n)));
+    return mantissa.toFixed(2).replace(/\.?0+$/, '') + 'e' + totalExp;
+  }
+  const num = n.toFixed(2).replace(/\.?0+$/, '');
+  const name = NAMES[i];
+  return name ? `${num}<span class="num-suffix" title="${name}">${UNITS[i]}</span>` : num + UNITS[i];
+}
+
 const CAP      = Number.MAX_VALUE;  // ≈ 1.8e308 — covers everything up to UCe
 const cap      = n => Math.min(n, CAP);
 const pick     = arr => arr[(Math.random() * arr.length) | 0];
@@ -448,15 +488,15 @@ function maxAffordFlat(cost) {
 }
 
 function updateUI() {
-  document.getElementById('cube-count').textContent = fmt(state.cubes);
-  document.getElementById('per-second').textContent = fmt(cps());
-  document.getElementById('per-click').textContent  = fmt(perClick());
+  document.getElementById('cube-count').innerHTML = fmtHTML(state.cubes);
+  document.getElementById('per-second').innerHTML = fmtHTML(cps());
+  document.getElementById('per-click').innerHTML  = fmtHTML(perClick());
   document.getElementById('shiny-count').textContent = state.shinies;
 
   const isMax = buyMode === 'max';
 
   const suMax = isMax ? maxAffordFlat(SHINY_UP_COST) : 0;
-  document.getElementById('su-cost').textContent = isMax ? fmt(SHINY_UP_COST) + ' (×' + fmt(suMax) + ')' : fmt(SHINY_UP_COST);
+  document.getElementById('su-cost').innerHTML = isMax ? fmtHTML(SHINY_UP_COST) + ' (×' + fmtHTML(suMax) + ')' : fmtHTML(SHINY_UP_COST);
   document.getElementById('shiny-lvl').textContent =
     'Level ' + state.shinyLevel + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
   toggleCard(document.getElementById('shiny-up'),
@@ -464,7 +504,7 @@ function updateUI() {
 
   const acC = autoClickerCost();
   const acMax = isMax ? maxAfford(AC_BASE, 1.6, state.autoClicker) : 0;
-  document.getElementById('ac-cost').textContent  = isMax ? fmt(acC) + ' (×' + fmt(acMax) + ')' : fmt(acC);
+  document.getElementById('ac-cost').innerHTML    = isMax ? fmtHTML(acC) + ' (×' + fmtHTML(acMax) + ')' : fmtHTML(acC);
   document.getElementById('ac-owned').textContent = state.autoClicker;
   document.getElementById('ac-rate').textContent  = state.autoClicker;
   toggleCard(document.getElementById('auto-clicker'),
@@ -472,7 +512,7 @@ function updateUI() {
 
   const cc = clickCost();
   const ccMax = isMax ? maxAfford(15, 1.4, state.clickLevel) : 0;
-  document.getElementById('cu-cost').textContent  = isMax ? fmt(cc) + ' (×' + fmt(ccMax) + ')' : fmt(cc);
+  document.getElementById('cu-cost').innerHTML    = isMax ? fmtHTML(cc) + ' (×' + fmtHTML(ccMax) + ')' : fmtHTML(cc);
   document.getElementById('cu-owned').textContent = 'Level ' + state.clickLevel;
   toggleCard(document.getElementById('click-upgrade'),
              document.getElementById('cu-cost'), state.cubes >= cc);
@@ -480,7 +520,7 @@ function updateUI() {
   BOOSTS.forEach(b => {
     const c = boostCost(b);
     const bMax = isMax ? maxAfford(b.baseCost, b.growth, state.boosts[b.id]) : 0;
-    document.getElementById('bcost-' + b.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(bMax) + ')' : fmt(c);
+    document.getElementById('bcost-' + b.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(bMax) + ')' : fmtHTML(c);
     document.getElementById('bought-' + b.id).textContent = state.boosts[b.id];
     toggleCard(document.getElementById('boost-' + b.id),
                document.getElementById('bcost-' + b.id), state.cubes >= c);
@@ -489,7 +529,7 @@ function updateUI() {
   GEAR.forEach(g => {
     const c = gearCost(g);
     const gMax = isMax ? maxAfford(g.baseCost, 1.15, state.gear[g.id]) : 0;
-    document.getElementById('gcost-' + g.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(gMax) + ')' : fmt(c);
+    document.getElementById('gcost-' + g.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(gMax) + ')' : fmtHTML(c);
     document.getElementById('gowned-' + g.id).textContent = state.gear[g.id];
     toggleCard(document.getElementById('gear-' + g.id),
                document.getElementById('gcost-' + g.id), state.cubes >= c);
@@ -498,7 +538,7 @@ function updateUI() {
   BUILDINGS.forEach(b => {
     const c = buildingCost(b);
     const bMax = isMax ? maxAfford(b.baseCost, 1.15, state.buildings[b.id]) : 0;
-    document.getElementById('cost-' + b.id).textContent  = isMax ? fmt(c) + ' (×' + fmt(bMax) + ')' : fmt(c);
+    document.getElementById('cost-' + b.id).innerHTML    = isMax ? fmtHTML(c) + ' (×' + fmtHTML(bMax) + ')' : fmtHTML(c);
     document.getElementById('owned-' + b.id).textContent = state.buildings[b.id];
     toggleCard(document.getElementById('b-' + b.id),
                document.getElementById('cost-' + b.id), state.cubes >= c);

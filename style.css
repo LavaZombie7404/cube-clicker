@@ -198,6 +198,12 @@ footer {
   100%      { opacity: 0; transform: translate(-50%, 10px); }
 }
 
+.num-suffix {
+  text-decoration: underline dotted rgba(255, 255, 255, .35);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
 @media (max-width: 580px) {
   main { flex-direction: column; gap: 16px; margin: 14px auto; }
   header { padding: 16px 14px 4px; }
