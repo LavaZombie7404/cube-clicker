@@ -156,14 +156,15 @@ function _tier(d) {
   return { i, mantissa };
 }
 
-// Format an exponent value using K/M/T/Qa/… suffixes, falling through to plain
-// digits when small and to raw scientific when the exponent itself is huge.
+// Format an exponent value using k/m/t/qa/… suffixes (lowercase so they read
+// distinctly from the main number's suffix), falling through to plain digits
+// when small and to raw scientific when the exponent itself is huge.
 function _fmtExp(n) {
   if (n < 1000) return String(n);
   const d = D(n);
   if (d.gte(SCI_THRESHOLD)) return d.toExponential(2).replace(/\.?0+e/, 'e');
   const { i, mantissa } = _tier(d);
-  return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
+  return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i].toLowerCase();
 }
 
 // For values past the suffix table, emit Decimal's own big-number form
