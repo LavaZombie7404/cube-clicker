@@ -672,9 +672,12 @@ function refreshAutoRate() {
   if (state.autoRate > state.autoClicker) state.autoRate = state.autoClicker;
   const box = document.getElementById('auto-rate-box');
   const sl  = document.getElementById('auto-rate');
+  const inp = document.getElementById('auto-rate-input');
   box.style.display = state.autoClicker > 0 ? '' : 'none';
-  sl.max   = state.autoClicker;
-  sl.value = state.autoRate;
+  sl.max    = state.autoClicker;
+  sl.value  = state.autoRate;
+  inp.max   = state.autoClicker;
+  inp.value = state.autoRate;
   document.getElementById('ar-val').textContent = state.autoRate;
   document.getElementById('ar-max').textContent = state.autoClicker;
 }
@@ -953,11 +956,20 @@ function init() {
       else                                setBuyMode(parseInt(btn.dataset.amt, 10));
     }));
   const arSlider = document.getElementById('auto-rate');
-  arSlider.addEventListener('input', () => {
-    state.autoRate = parseInt(arSlider.value, 10) || 0;
-    document.getElementById('ar-val').textContent = state.autoRate;
-  });
+  const arInput  = document.getElementById('auto-rate-input');
+  const setAutoRate = raw => {
+    let v = parseInt(raw, 10);
+    if (!isFinite(v) || v < 0) v = 0;
+    if (v > state.autoClicker) v = state.autoClicker;
+    state.autoRate = v;
+    arSlider.value = v;
+    arInput.value  = v;
+    document.getElementById('ar-val').textContent = v;
+  };
+  arSlider.addEventListener('input',  () => setAutoRate(arSlider.value));
+  arInput .addEventListener('input',  () => setAutoRate(arInput.value));
   arSlider.addEventListener('change', save);
+  arInput .addEventListener('change', save);
   refreshAutoRate();
   document.getElementById('prestige-btn').addEventListener('click', doPrestige);
   document.getElementById('win-btn').addEventListener('click', winGame);

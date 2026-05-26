@@ -144,6 +144,12 @@ main {
 .rate-box label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 7px; }
 .rate-box b { color: var(--accent2); }
 .rate-box input[type=range] { width: 100%; height: 26px; accent-color: var(--accent2); cursor: pointer; }
+.rate-box input[type=number] {
+  width: 100%; margin-top: 6px; padding: 6px 10px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  font-size: .9rem; font-family: inherit;
+}
 .card-info .name { font-weight: 700; }
 .card-info .desc { color: var(--muted); font-size: .8rem; margin: 2px 0; }
 .card-info .owned { color: var(--accent2); font-size: .76rem; font-weight: 600; }
