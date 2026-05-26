@@ -156,23 +156,22 @@ function _tier(d) {
   return { i, mantissa };
 }
 
-// Format an exponent value using k/m/t/qa/… suffixes (lowercase so they read
-// distinctly from the main number's suffix), falling through to plain digits
-// when small and to raw scientific when the exponent itself is huge.
-function _fmtExp(n) {
-  if (n < 1000) return String(n);
-  const d = D(n);
-  if (d.gte(SCI_THRESHOLD)) return d.toExponential(2).replace(/\.?0+e/, 'e');
-  const { i, mantissa } = _tier(d);
-  return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i].toLowerCase();
+// Render a Decimal's "mantissa e exponent" without the explicit + sign or
+// trailing zeros on the mantissa.
+function _sciStr(d) {
+  return d.toExponential(2).replace(/\.?0+e/, 'e').replace('e+', 'e');
 }
 
-// For values past the suffix table, emit Decimal's own big-number form
-// (scientific for "small" megabignums, tower notation for absurd ones).
-// Exponents themselves get the K/M/T/… suffix treatment so 1e3450 reads as 1e+3.45K.
+// For values past the suffix table, emit Decimal's own big-number form, with
+// the exponent itself shown in nested scientific notation when it's ≥ 1000
+// (so 1e100000 becomes 1e(1e5), 1e3450 becomes 1e(3.45e3)).
 function _bigFallback(d) {
   const s = d.toExponential(2).replace(/\.?0+e/, 'e');
-  return s.replace(/e([+-])(\d+)/, (_, sign, exp) => 'e' + sign + _fmtExp(Number(exp)));
+  return s.replace(/e([+-])(\d+)/, (_, sign, exp) => {
+    const n = Number(exp);
+    if (n < 1000) return 'e' + sign + String(n);
+    return 'e(' + _sciStr(D(n)) + ')';
+  });
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
