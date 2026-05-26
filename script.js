@@ -97,8 +97,10 @@ const UNITS = (function() {
 function fmt(n) {
   if (n === Infinity) return '∞';
   if (!isFinite(n)) return '0';
-  n = Math.floor(n * 10) / 10;
-  if (n < 1000) return (n % 1 === 0 ? String(n) : n.toFixed(1));
+  if (n < 1000) {
+    n = Math.floor(n * 10) / 10;          // 1-decimal trim only for small values;
+    return (n % 1 === 0 ? String(n) : n.toFixed(1));  // for n near MAX_VALUE, n*10 overflows to Infinity.
+  }
   let i = 0;
   while (n >= 1000 && i < UNITS.length - 1) { n /= 1000; i++; }
   if (i === UNITS.length - 1 && n >= 1000) {
