@@ -156,12 +156,22 @@ function _tier(d) {
   return { i, mantissa };
 }
 
+// Format an exponent value using K/M/T/Qa/… suffixes, falling through to plain
+// digits when small and to raw scientific when the exponent itself is huge.
+function _fmtExp(n) {
+  if (n < 1000) return String(n);
+  const d = D(n);
+  if (d.gte(SCI_THRESHOLD)) return d.toExponential(2).replace(/\.?0+e/, 'e');
+  const { i, mantissa } = _tier(d);
+  return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i];
+}
+
 // For values past the suffix table, emit Decimal's own big-number form
 // (scientific for "small" megabignums, tower notation for absurd ones).
-// Exponents are comma-grouped so 1e3450 reads as 1e+3,450.
+// Exponents themselves get the K/M/T/… suffix treatment so 1e3450 reads as 1e+3.45K.
 function _bigFallback(d) {
   const s = d.toExponential(2).replace(/\.?0+e/, 'e');
-  return s.replace(/e([+-])(\d+)/, (_, sign, exp) => 'e' + sign + Number(exp).toLocaleString('en-US'));
+  return s.replace(/e([+-])(\d+)/, (_, sign, exp) => 'e' + sign + _fmtExp(Number(exp)));
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
