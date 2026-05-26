@@ -168,25 +168,25 @@ function _tier(d) {
   return { i, mantissa };
 }
 
-// Format an exponent value using the same K/M/T/Qa/… suffix table as the
-// mantissa side, lowercased so it reads distinctly.
-function _fmtExp(n) {
-  if (n < 1000) return String(n);
-  const d = D(n);
-  if (d.gte(SCI_THRESHOLD)) return d.toExponential(2).replace(/\.?0+e/, 'e');
+// Format a Decimal-typed exponent. Plain digits when small, K/M/T/Qa/… suffix
+// when it fits the table, recursive parenthesised fallback for tower-range.
+function _fmtExpD(d) {
+  if (d.lt(1000)) return d.floor().toNumber().toString();
+  if (d.gte(SCI_THRESHOLD)) return '(' + _bigFallback(d) + ')';
   const { i, mantissa } = _tier(d);
   return mantissa.toFixed(2).replace(/\.?0+$/, '') + UNITS[i].toLowerCase();
 }
 
-// For values past the suffix table, emit Decimal's scientific form with the
-// exponent itself suffixed: 1e3450 → 1e+3.45k, 1e1234567 → 1e+1.23m. Anchored
-// match so tower-notation strings like "ee17.2" (= 10^10^17.2) pass through
-// untouched instead of getting their inner "e17" mangled.
+// For values past the suffix table, decompose d = M × 10^E directly via
+// log10 instead of parsing toExponential's string. This handles tower-form
+// values (e.g. ee17.2 = 10^(10^17.2)) by formatting their log10 with K/M/T/…
+// suffixes — so ee17.2 reads as 1e+158.5qa.
 function _bigFallback(d) {
-  const s = d.toExponential(2).replace(/\.?0+e/, 'e');
-  const m = s.match(/^(.+?)e([+-]?)(\d+)$/);
-  if (!m) return s;
-  return m[1] + 'e' + (m[2] === '-' ? '-' : '+') + _fmtExp(Number(m[3]));
+  const log = d.log10();
+  const expFloor = log.floor();
+  const mantissa = D(10).pow(log.sub(expFloor)).toNumber();
+  const mantStr = isFinite(mantissa) ? mantissa.toFixed(2).replace(/\.?0+$/, '') : '1';
+  return mantStr + 'e+' + _fmtExpD(expFloor);
 }
 
 // Thousand-separator form for the K-range (1,000 ... 999,999); suffixes kick in at 1 M.
