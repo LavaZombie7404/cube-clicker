@@ -52,6 +52,9 @@ const BOOSTS = [
   { id:'x500all',  name:'Quingentuple Everything',  desc:'×500 cubes from clicks AND auto income.',  baseCost:1e90, growth:250000 },
   { id:'x5000all',  name:'Quinmillicuple Everything',  desc:'×5000 cubes from clicks AND auto income. Unlocked at 50 prestiges.',     baseCost:1e200, growth:5e7, unlockAt:50  },
   { id:'x10000all', name:'Decamillicuple Everything',  desc:'×10,000 cubes from clicks AND auto income. Unlocked at 100 prestiges.', baseCost:'1e500', growth:5e9, unlockAt:100 },
+  { id:'p10mult',   name:'Myriad Power',  desc:'×10,000 cubes from clicks AND auto income. Unlocked at 10 prestiges.',       baseCost:'1e150',   growth:1e7,  unlockAt:10   },
+  { id:'p100mult',  name:'Lakh Power',    desc:'×100,000 cubes from clicks AND auto income. Unlocked at 100 prestiges.',     baseCost:'1e1000',  growth:1e10, unlockAt:100  },
+  { id:'p1kmult',   name:'Mega Power',    desc:'×1,000,000 cubes from clicks AND auto income. Unlocked at 1000 prestiges.',  baseCost:'1e10000', growth:1e15, unlockAt:1000 },
 ];
 
 // Cube Gear — the per-click counterpart to the Auto-Solvers (each adds flat cubes/click).
@@ -67,7 +70,7 @@ const GEAR = [
 
 const SAVE_KEY = 'cubeClickerSave';
 
-let state = { cubes:D(0), total:D(0), clickLevel:0, shinies:0, shinyBonus:D(0), shinyLevel:0, autoClicker:0, autoRate:0, prestige:0, wins:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
+let state = { cubes:D(0), total:D(0), clickLevel:0, shinies:0, shinyBonus:D(0), shinyLevel:D(0), autoClicker:0, autoRate:0, prestige:0, wins:0, buildings:{}, boosts:{}, gear:{}, lastSeen:Date.now() };
 BUILDINGS.forEach(b => state.buildings[b.id] = 0);
 BOOSTS.forEach(b => state.boosts[b.id] = 0);
 GEAR.forEach(g => state.gear[g.id] = 0);
@@ -96,6 +99,9 @@ const perClick     = () => cap(
     .mul(D(500).pow(state.boosts.x500all))
     .mul(D(5000).pow(state.boosts.x5000all))
     .mul(D(10000).pow(state.boosts.x10000all))
+    .mul(D(10000).pow(state.boosts.p10mult))
+    .mul(D(100000).pow(state.boosts.p100mult))
+    .mul(D(1000000).pow(state.boosts.p1kmult))
     .mul(prestigeMult())
     .mul(winMult())
 );
@@ -115,10 +121,13 @@ const cps          = () => cap(
     .mul(D(500).pow(state.boosts.x500all))
     .mul(D(5000).pow(state.boosts.x5000all))
     .mul(D(10000).pow(state.boosts.x10000all))
+    .mul(D(10000).pow(state.boosts.p10mult))
+    .mul(D(100000).pow(state.boosts.p100mult))
+    .mul(D(1000000).pow(state.boosts.p1kmult))
     .mul(prestigeMult())
     .mul(winMult())
 );
-const shinyChance  = () => SHINY_CHANCE + state.shinyLevel * 0.01;
+const shinyChance  = () => SHINY_CHANCE + state.shinyLevel.mul(0.01).toNumber();
 const autoClickerCost = () => D(AC_BASE).mul(D(1.6).pow(state.autoClicker)).floor();
 
 /* =================== HELPERS =================== */
@@ -560,25 +569,26 @@ function toggleCard(card, costEl, affordable) {
 
 // Closed-form for exponential cost series. Total cost of N levels starting at
 // `owned` is firstCost * (r^N - 1) / (r - 1), so the max N affordable is
-// floor(log_r(1 + budget * (r-1) / firstCost)). Cap at Number.MAX_SAFE_INTEGER
-// so the level counter (a plain Number) never loses integer precision.
-const HARD_BUY_CAP = Number.MAX_SAFE_INTEGER;
+// floor(log_r(1 + budget * (r-1) / firstCost)). Exponential cost keeps the
+// result well under Number's 2^53 precision limit even at ludicrous cube
+// counts, so no hard cap is needed.
 function maxAfford(baseCost, ratio, owned) {
   if (ratio === 1) {
     const flat = state.cubes.div(baseCost).floor().toNumber();
-    return Math.min(isFinite(flat) ? Math.max(0, flat) : HARD_BUY_CAP, HARD_BUY_CAP);
+    return isFinite(flat) && flat > 0 ? flat : 0;
   }
   const r = D(ratio);
   const firstCost = D(baseCost).mul(r.pow(owned));
   if (state.cubes.lt(firstCost)) return 0;
   const inner = state.cubes.mul(r.sub(1)).div(firstCost).add(1);
   const n = inner.log10().div(r.log10()).floor().toNumber();
-  if (!isFinite(n) || n < 0) return 0;
-  return Math.min(n, HARD_BUY_CAP);
+  return isFinite(n) && n > 0 ? n : 0;
 }
+// Flat cost: returns a Decimal (uncapped) so flat-cost upgrades like the
+// Shiny Magnet can buy arbitrarily many levels at once.
 function maxAffordFlat(cost) {
-  const n = state.cubes.div(cost).floor().toNumber();
-  return Math.min(isFinite(n) ? Math.max(0, n) : HARD_BUY_CAP, HARD_BUY_CAP);
+  const n = state.cubes.div(cost).floor();
+  return n.lt(0) ? D(0) : n;
 }
 
 function updateUI() {
@@ -592,7 +602,7 @@ function updateUI() {
   const suMax = isMax ? maxAffordFlat(SHINY_UP_COST) : 0;
   document.getElementById('su-cost').innerHTML = isMax ? fmtHTML(SHINY_UP_COST) + ' (×' + fmtHTML(suMax) + ')' : fmtHTML(SHINY_UP_COST);
   document.getElementById('shiny-lvl').textContent =
-    'Level ' + state.shinyLevel + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
+    'Level ' + fmt(state.shinyLevel) + '  ·  now ' + (shinyChance() * 100).toFixed(2) + '%';
   toggleCard(document.getElementById('shiny-up'),
              document.getElementById('su-cost'), state.cubes.gte(SHINY_UP_COST));
 
@@ -644,18 +654,18 @@ function updateUI() {
   const pBox = document.getElementById('prestige-box');
   const pCount = document.getElementById('prestige-count');
   const wBtn = document.getElementById('win-btn');
-  const prestigeReady = state.cubes.gte('1e300');
+  const prestigeReady = state.cubes.gte(PRESTIGE_MIN_THRESHOLD);
   pBox.style.display = (prestigeReady || state.prestige > 0) ? '' : 'none';
   const upcomingTier = PRESTIGE_TIERS.find(t => state.cubes.gte(t.threshold));
-  const upcomingGain = upcomingTier ? upcomingTier.stars : 1;
+  const upcomingGain = upcomingTier ? upcomingTier.stars : 0;
   const pBtn = document.getElementById('prestige-btn');
   pBtn.disabled = !prestigeReady;
   pBtn.textContent = prestigeReady && upcomingGain > 1
     ? '⭐ Prestige (+' + upcomingGain + ' stars)'
     : '⭐ Prestige';
-  pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / 10'
+  pCount.textContent = '⭐ Prestiges: ' + state.prestige + ' / ' + PRESTIGE_MAX_STARS
     + (state.wins > 0 ? '   🏆 Wins: ' + state.wins + ' (×' + fmt(winMult()) + ')' : '');
-  wBtn.style.display = state.prestige >= 10 ? '' : 'none';
+  wBtn.style.display = state.prestige >= PRESTIGE_MAX_STARS ? '' : 'none';
 }
 
 /* =================== ACTIONS =================== */
@@ -682,12 +692,14 @@ function bulkBuyExp(baseCost, ratio, get, set) {
 }
 
 // Flat cost: budget / cost, applied as one batched subtract + level set.
+// `affordable` is a Decimal; the level counter (get/set) must also be Decimal.
 function bulkBuyFlat(cost, get, set) {
-  const affordable = maxAffordFlat(cost);
-  const count = Math.min(desiredCount(), affordable);
-  if (count <= 0) return;
+  const affordable = maxAffordFlat(cost);          // Decimal
+  const desired = desiredCount();                  // Number or Infinity
+  const count = desired === Infinity ? affordable : D.min(affordable, D(desired));
+  if (count.lte(0)) return;
   state.cubes = state.cubes.sub(D(cost).mul(count));
-  set(get() + count);
+  set(get().add(count));
   updateUI();
   save();
 }
@@ -748,9 +760,11 @@ function setCustomBuyMode() {
   updateUI();
 }
 
-// Prestige reward tiers built from a generator: each ×10 in cube count adds
-// one star, on the "1eX[K/M/B/T/Qa/Qi/Sx/Sp/Oc/No/Dc/UDc]" rhythm.
-// Top of the ladder is 1e100UDc → +36 stars. Highest match wins.
+// Prestige reward tiers: 1e100 → 1 star, then each ×10 in the cube count adds
+// one more star (1e1K → 2, 1e10K → 3, 1e100K → 4, 1e1M → 5, …). Caps at 30
+// stars (the win goal) at 1e10No. Highest matching tier wins.
+const PRESTIGE_MAX_STARS = 30;
+const PRESTIGE_MIN_THRESHOLD = '1e100';      // 1e100 — first tier
 const PRESTIGE_TIERS = (function() {
   const SUFFIXES = [
     { name: 'K',   exp:  3 }, { name: 'M',   exp:  6 }, { name: 'B',   exp:  9 },
@@ -758,24 +772,24 @@ const PRESTIGE_TIERS = (function() {
     { name: 'Sx',  exp: 21 }, { name: 'Sp',  exp: 24 }, { name: 'Oc',  exp: 27 },
     { name: 'No',  exp: 30 }, { name: 'Dc',  exp: 33 }, { name: 'UDc', exp: 36 },
   ];
-  const tiers = [];
+  const tiers = [{ threshold: '1e100', stars: 1, label: '1e100' }];   // pre-suffix floor
   for (const s of SUFFIXES) {
     for (const m of [1, 10, 100]) {
       const exp = s.exp + (m === 1 ? 0 : m === 10 ? 1 : 2);
-      if (exp < 4) continue;            // skip 1e1K (=1e1000), too close to 1e300
+      const stars = exp - 1;            // 1e1K (exp=3) → 2 stars
+      if (stars < 2 || stars > PRESTIGE_MAX_STARS) continue;
       tiers.push({
         threshold: '1e1' + '0'.repeat(exp),
-        stars: exp - 2,
+        stars,
         label: '1e' + m + s.name,
       });
     }
   }
   tiers.reverse();                      // highest threshold first
-  tiers.push({ threshold: '1e300', stars: 1, label: '1e300' });
   return tiers;
 })();
 function doPrestige() {
-  if (state.cubes.lt('1e300')) return;
+  if (state.cubes.lt(PRESTIGE_MIN_THRESHOLD)) return;
   const tier = PRESTIGE_TIERS.find(t => state.cubes.gte(t.threshold));
   const gain = tier ? tier.stars : 1;
   const bonusMsg = gain > 1
@@ -788,7 +802,7 @@ function doPrestige() {
   state.clickLevel = 0;
   state.shinies = 0;
   state.shinyBonus = D(0);
-  state.shinyLevel = 0;
+  state.shinyLevel = D(0);
   state.autoClicker = 0;
   state.autoRate = 0;
   BUILDINGS.forEach(b => state.buildings[b.id] = 0);
@@ -803,7 +817,7 @@ function doPrestige() {
 }
 
 function winGame() {
-  if (state.prestige < 10) return;
+  if (state.prestige < PRESTIGE_MAX_STARS) return;
   const nextMult = D(100).pow(state.wins + 1);
   const overlay = document.createElement('div');
   overlay.id = 'win-overlay';
@@ -833,7 +847,7 @@ function restartFromWin() {
   state.clickLevel = 0;
   state.shinies = 0;
   state.shinyBonus = D(0);
-  state.shinyLevel = 0;
+  state.shinyLevel = D(0);
   state.autoClicker = 0;
   state.autoRate = 0;
   BUILDINGS.forEach(b => state.buildings[b.id] = 0);
@@ -933,6 +947,7 @@ function save() {
     cubes:      state.cubes.toString(),
     total:      state.total.toString(),
     shinyBonus: state.shinyBonus.toString(),
+    shinyLevel: state.shinyLevel.toString(),
   });
   localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   document.getElementById('save-status').textContent = 'saved ✓';
@@ -952,7 +967,7 @@ function load() {
     state.shinyBonus = dec(d.shinyBonus);
     state.clickLevel = num(d.clickLevel);
     state.shinies    = num(d.shinies);
-    state.shinyLevel = num(d.shinyLevel);
+    state.shinyLevel = dec(d.shinyLevel);
     state.autoClicker = num(d.autoClicker);
     state.autoRate   = d.autoRate !== undefined ? num(d.autoRate) : num(d.autoClicker);
     state.prestige   = num(d.prestige);
